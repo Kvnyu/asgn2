@@ -22,7 +22,7 @@ instance Show Rank where
   show Seven = "7"
   show Eight = "8"
   show Nine = "9"
-  show Ten = "10"
+  show Ten = "T"
   show Jack = "J"
   show Queen = "Q"
   show King = "K"
@@ -37,6 +37,30 @@ instance Show Meld where
   show (Straight3 c1 c2 c3) = "R3" ++ show c1 ++ show c2 ++ show c3
   show (Straight4 c1 c2 c3 c4) = "R4" ++ show c1 ++ show c2 ++ show c3 ++ show c4
   show (Straight5 c1 c2 c3 c4 c5) = "R5" ++ show c1 ++ show c2 ++ show c3 ++ show c4 ++ show c5
+
+
+-- | Hardcoded Char -> Suit
+suitParser :: Parser Suit
+suitParser = (is 'S' >> pure Spade) |||
+             (is 'C' >> pure Club) |||
+             (is 'C' >> pure Diamond) |||
+             (is 'C' >> pure Heart)
+-- | Hardcoded Char -> Rank
+rankParser :: Parser Rank
+rankParser = (is 'A' >> pure Ace) |||
+             (is '2' >> pure Two) |||
+             (is '3' >> pure Three) |||
+             (is '4' >> pure Four) |||
+             (is '5' >> pure Five) |||
+             (is '6' >> pure Six) |||
+             (is '7' >> pure Seven) |||
+             (is '8' >> pure Eight) |||
+             (is '9' >> pure Nine) |||
+             (is '9' >> pure Ten) |||
+             (is 'T' >> pure Jack) |||
+             (is 'J' >> pure King) |||
+             (is 'Q' >> pure Queen) |||
+
 -- | This card is called at the beginning of your turn, you need to decide which
 -- pile to draw from.
 pickCard :: ActionFunc
