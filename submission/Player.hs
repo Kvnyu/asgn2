@@ -1,6 +1,5 @@
 
 module Player where
-
 import Prelude
 import Data.List
 import Parser.Parser -- This is the source for the parser from the course notes
@@ -433,24 +432,31 @@ minMelds m hand smallest = (filter ((==smallest).deadwoodCalculator.(removeEleme
 
 
 assembleMeld :: [[Card]] -> [Card] -> [Meld]
-assembleMeld melds hand = [x | x <- map createMeld melds] ++  (map createMeld ( [[x] | x <- removeElements hand (concat melds)]))
+assembleMeld melds hand = m ++ deadwood
+  where deadwood = map fromJust $ filter maybeFilter $ map createMeld $ [[x] | x <- removeElements hand $ concat melds]
+        m = map fromJust $ filter maybeFilter $ map createMeld melds
 
+fromJust :: Maybe a -> a
+fromJust (Just t) = t
+fromJust Nothing = error "You should never get to this"
+
+
+maybeFilter :: Maybe a -> Bool
+maybeFilter (Nothing) = False
+maybeFilter (Just _) = True
 -- | Creates a meld from a list of cards
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace]
 -- >>>createMeld a
 -- S3(SA)(HA)(CA)
-createMeld :: [Card] -> Meld
-createMeld hand
-  | length hand == 1 = Deadwood $ head hand
-  | length hand == 3 = if isSet hand then Set3 (hand!!0) (hand!!1) (hand!!2) else Straight3 (hand!!0) (hand!!1) (hand!!2)
-  | length hand == 4 = if isSet hand then Set4 (hand!!0) (hand!!1) (hand!!2) (hand!!3) else Straight4 (hand!!0) (hand!!1) (hand!!2) (hand!!3)
-  | length hand == 5 = Straight5 (hand!!0) (hand!!1) (hand!!2) (hand!!3)(hand!!4)
-  | otherwise = Deadwood $ Card Spade Ace
-
-
-
-
+createMeld :: [Card] -> Maybe Meld
+createMeld [c1] = Just $ Deadwood c1
+createMeld three@(c1:c2:c3:[]) = if isSet three then Just $ Set3 c1 c2 c3 else Just $ Straight3 c1 c2 c3
+createMeld four@(c1:c2:c3:c4:[]) = if isSet four then Just $ Set4 c1 c2 c3 c4 else Just $ Straight4 c1 c2 c3 c4
+createMeld (c1:c2:c3:c4:c5:[]) = Just $ Straight5 c1 c2 c3 c4 c5
+createMeld [] = Nothing
+createMeld [_,_] = Nothing
+createMeld (_:_:_:_:_:_:_) = Nothing
 -- | Creates a list of melds given a hand
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
