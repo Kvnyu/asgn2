@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 92681519d7d605febf08556407ee56db7a2f6aa6b00cb234c969c726d2800a4c
+-- hash: 85a7e699ac2172b81562d5980691b8e539f961d515e5e2039beafc7817bbe103
 
 name:           rummy
 version:        0.1.0.0
@@ -28,7 +28,6 @@ library
       EitherIO
       Parser.Instances
       Parser.Parser
-      Player
       Rummy.Play
       Rummy.Rules
       Rummy.Types
@@ -55,6 +54,7 @@ library
 executable staticgame
   main-is: Main.hs
   other-modules:
+      Player
       Paths_rummy
   hs-source-dirs:
       staticgame

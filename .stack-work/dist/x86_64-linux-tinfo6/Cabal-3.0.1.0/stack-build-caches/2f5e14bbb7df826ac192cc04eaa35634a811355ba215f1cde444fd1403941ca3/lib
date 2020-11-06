@@ -7,7 +7,7 @@
 /home/kevin/.stack/programs/x86_64-linux/ghc-tinfo6-8.8.2/lib/ghc-8.8.2/include/ghcversion.h:
   hash: 3917cf8a87b348f375c0535573a693e4819d3baa7f696a6ba9bf40e5a4d9a7f2
 /home/kevin/Documents/UNI/2020/FIT2102/asgn2/rummy.cabal:
-  hash: a348bf8d61837000035b87e068c635f306a8e95a6330c31c1bdababafaf7003e
+  hash: 583e7400d24d694f9749c0584cdeaa44edf447297da929b5c422bb716690da91
 /home/kevin/Documents/UNI/2020/FIT2102/asgn2/package.yaml:
   hash: 4dbe5eab7da8d8aa37d74c914fa150a8d28585a1d0d5cebc4de4338890ac957c
 /home/kevin/Documents/UNI/2020/FIT2102/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/autogen/cabal_macros.h:
@@ -22,8 +22,6 @@
   hash: c781446adf485ed01c61bdce0d72dc600455891f53f89eebbf47322d7b212014
 /home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Rummy/Play.hs:
   hash: 547184a2203795440384177949c177034f52952a7fef6cd6f846d4b7932cb296
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Player.hs:
-  hash: 2566c6fcde8ab3b91bb9dac1258f45e93af5fb76e6bb6e3e3d4df88a1d461ff6
 /home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Rummy/Rules.hs:
   hash: 8aa662e20e9a07a4c47885dabd02bae53759a47e39a7e037fd723c99239c7259
 /home/kevin/Documents/UNI/2020/FIT2102/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/autogen/Paths_rummy.hs:

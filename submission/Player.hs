@@ -1,5 +1,3 @@
--- | This is the file you need to implement to complete the assignment. Remember
--- to comment where appropriate, use generic types and have fun!
 
 module Player where
 
@@ -43,13 +41,13 @@ instance Show Meld where
 -- | This card is called at the beginning of your turn, you need to decide which
 -- pile to draw from.
 pickCard :: ActionFunc
-pickCard card score memory oppAction hand
+pickCard card _ _ _ hand
   | completesMeld hand card = (Discard, "hey")
   | otherwise = (Stock, "hey")
 -- | This function is called once you have drawn a card, you need to decide
 -- which action to call.
 playCard :: PlayFunc
-playCard card score memory hand
+playCard card _ _ hand
   | gin = (Action Gin dropCard, newMemory)
   | knock = (Action Knock dropCard, newMemory)
   | otherwise = (Action Drop dropCard, newMemory)
@@ -62,8 +60,7 @@ playCard card score memory hand
 -- | This function is called at the end of the game when you need to return the
 -- melds you formed with your last hand.
 makeMelds :: MeldFunc
-makeMelds score memory hand = assembleMeld (createBestMeld hand) hand
-  where tree = buildTree (buildMelds hand) [] hand
+makeMelds _ _ hand = assembleMeld (createBestMeld hand) hand
 
 
 
@@ -133,7 +130,7 @@ canKnock hand = findMinDeadwood tree < 10
 -- >>>showRank $ Card Spade Jack
 -- "J"
 showRank :: Card -> String
-showRank (Card s1 r1) = show r1
+showRank (Card _ r1) = show r1
 -- | Sort a list of cards on rank and then suit
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade King, Card Spade Queen, Card Diamond Ten, Card Diamond Jack, Card Club Jack, Card Club Six]
@@ -172,13 +169,13 @@ adjacentCard :: Card -> Card -> Bool
 adjacentCard c1 c2 = adjacentRank c1 c2 && equalSuit c1 c2
 
 adjacentRank :: Card -> Card -> Bool
-adjacentRank (Card s1 r1) (Card s2 r2) = if r1 /= King then succ r1 == r2 else False
+adjacentRank (Card _ r1) (Card _ r2) = if r1 /= King then succ r1 == r2 else False
 
 equalRank :: Card -> Card -> Bool
-equalRank (Card s1 r1) (Card s2 r2) = r1 == r2
+equalRank (Card _ r1) (Card _ r2) = r1 == r2
 
 equalSuit :: Card -> Card -> Bool
-equalSuit (Card s1 r1) (Card s2 r2) = s1 == s2
+equalSuit (Card s1 _) (Card s2 _) = s1 == s2
 
 
 -- | Finds the highest card out of a list of cards
@@ -203,7 +200,7 @@ highestCard hand = last $ sortSuit hand
 
 isRun :: [Card] -> Bool
 isRun [] = False
-isRun [x] = True
+isRun [_] = True
 isRun (x:xs) = isRun xs && (adjacentCard x (head xs))
 
 -- | Check if a list of cards is a set
@@ -224,7 +221,7 @@ isRun (x:xs) = isRun xs && (adjacentCard x (head xs))
 
 isSet :: [Card] -> Bool
 isSet [] = False
-isSet [x] = True
+isSet [_] = True
 isSet (x:xs) = equalRank x (head xs) && isSet xs
 -- | Generates subsequences of size n from a list
 --
@@ -378,8 +375,8 @@ buildTree melds hand deadwood
 -- 0
 
 findMinDeadwood :: RoseTree -> Int
-findMinDeadwood (Node (hand, deadwood) []) = deadwoodCalculator deadwood
-findMinDeadwood (Node (hand, deadwood) children) = foldr min 200 $ map findMinDeadwood children
+findMinDeadwood (Node (_, deadwood) []) = deadwoodCalculator deadwood
+findMinDeadwood (Node (_, _) children) = foldr min 200 $ map findMinDeadwood children
 
 
 -- | Flattens a RoseTree's paths
@@ -392,8 +389,8 @@ findMinDeadwood (Node (hand, deadwood) children) = foldr min 200 $ map findMinDe
 --[[[],[(SA),(CA),(DA)]],[[],[(SA),(CA),(HA)]],[[],[(SA),(DA),(HA)],[(CA),(C2),(C3)]],[[],[(CA),(DA),(HA)]],[[],[(CA),(C2),(C3)],[(SA),(DA),(HA)]]]
 
 paths :: RoseTree -> [[[Card]]]
-paths (Node (hand, deadwood) []) = [[hand]]
-paths (Node (hand,deadwood) children) = map (hand:) $ concat $ map paths children
+paths (Node (hand, _) []) = [[hand]]
+paths (Node (hand,_) children) = map (hand:) $ concat $ map paths children
 --paths (Node (hand,deadwood) children) = map ((:) hand . concat . paths) children
 
 -- | Removes empty lists caused by empty children
@@ -420,7 +417,7 @@ removeEmptyList cardl = map (filter (/=[])) cardl
 -- [[[(SA),(DA),(HA)],[(CA),(C2),(C3)]],[[(CA),(C2),(C3)],[(SA),(DA),(HA)]]]
 
 minMelds :: [[[Card]]] -> [Card] -> Int -> [[[Card]]]
-minMelds m hand min = (filter ((==min).deadwoodCalculator.(removeElements hand).concat) m)
+minMelds m hand smallest = (filter ((==smallest).deadwoodCalculator.(removeElements hand).concat) m)
 
 
 -- | Assembles formal meld list given a list of melds and a hand
@@ -444,10 +441,15 @@ assembleMeld melds hand = [x | x <- map createMeld melds] ++  (map createMeld ( 
 -- >>>createMeld a
 -- S3(SA)(HA)(CA)
 createMeld :: [Card] -> Meld
-createMeld [c1] = Deadwood c1
-createMeld three@(c1:c2:c3:[]) = if isSet three then Set3 c1 c2 c3 else Straight3 c1 c2 c3
-createMeld four@(c1:c2:c3:c4:[]) = if isSet four then Set4 c1 c2 c3 c4 else Straight4 c1 c2 c3 c4
-createMeld five@(c1:c2:c3:c4:c5:[]) = Straight5 c1 c2 c3 c4 c5
+createMeld hand
+  | length hand == 1 = Deadwood $ head hand
+  | length hand == 3 = if isSet hand then Set3 (hand!!0) (hand!!1) (hand!!2) else Straight3 (hand!!0) (hand!!1) (hand!!2)
+  | length hand == 4 = if isSet hand then Set4 (hand!!0) (hand!!1) (hand!!2) (hand!!3) else Straight4 (hand!!0) (hand!!1) (hand!!2) (hand!!3)
+  | length hand == 5 = Straight5 (hand!!0) (hand!!1) (hand!!2) (hand!!3)(hand!!4)
+  | otherwise = Deadwood $ Card Spade Ace
+
+
+
 
 -- | Creates a list of melds given a hand
 -- Examples:
@@ -457,6 +459,4 @@ createMeld five@(c1:c2:c3:c4:c5:[]) = Straight5 c1 c2 c3 c4 c5
 createBestMeld :: [Card] -> [[Card]]
 createBestMeld hand =  head (minMelds (removeEmptyList $ paths tree) hand (findMinDeadwood tree))
   where tree = buildTree (buildMelds hand) [] hand
-
-
 

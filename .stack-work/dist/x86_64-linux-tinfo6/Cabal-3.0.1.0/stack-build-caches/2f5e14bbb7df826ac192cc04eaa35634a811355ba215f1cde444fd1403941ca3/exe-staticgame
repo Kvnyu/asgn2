@@ -7,8 +7,10 @@
 ? /home/kevin/Documents/UNI/2020/FIT2102/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/staticgame/autogen/Paths_rummy.hs
 : hash: a321fa7d2a0a7fbb7e07f5b19d310cecd8b89afef1835d6a0309db156a8ea9c0
 /home/kevin/Documents/UNI/2020/FIT2102/asgn2/rummy.cabal:
-  hash: a348bf8d61837000035b87e068c635f306a8e95a6330c31c1bdababafaf7003e
+  hash: 583e7400d24d694f9749c0584cdeaa44edf447297da929b5c422bb716690da91
 /home/kevin/Documents/UNI/2020/FIT2102/asgn2/package.yaml:
   hash: 4dbe5eab7da8d8aa37d74c914fa150a8d28585a1d0d5cebc4de4338890ac957c
+/home/kevin/Documents/UNI/2020/FIT2102/asgn2/submission/Player.hs:
+  hash: f2c07fd6bd79f6ca5742ce9450e93da2769099818381c7afc2ce8bbbf39e7658
 /usr/include/stdc-predef.h:
   hash: 64fdf694f7b3d51ec6c45c06dcb71ebbe9455742d3ea673012016668853d3bff
