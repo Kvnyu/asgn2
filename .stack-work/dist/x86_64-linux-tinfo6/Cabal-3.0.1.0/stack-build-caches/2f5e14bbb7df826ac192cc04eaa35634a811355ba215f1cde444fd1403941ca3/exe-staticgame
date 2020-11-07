@@ -1,16 +1,16 @@
-? /home/kevin/Documents/UNI/2020/FIT2102/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/staticgame/autogen/cabal_macros.h
-: hash: 701db3aa65ae9d8c18c0b349987d5d013e1bf5b8fc6ea81b4d46c760fbf47b38
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/staticgame/Main.hs:
+/home/kevin/Documents/UNI/2020/asgn2/staticgame/Main.hs:
   hash: af55ce1864c5d6b2b50872c866e55840b4d534598b4f7bd6b1ecad885efb29c4
+/home/kevin/Documents/UNI/2020/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/staticgame/autogen/cabal_macros.h:
+  hash: 701db3aa65ae9d8c18c0b349987d5d013e1bf5b8fc6ea81b4d46c760fbf47b38
+/home/kevin/Documents/UNI/2020/asgn2/package.yaml:
+  hash: 4dbe5eab7da8d8aa37d74c914fa150a8d28585a1d0d5cebc4de4338890ac957c
 /home/kevin/.stack/programs/x86_64-linux/ghc-tinfo6-8.8.2/lib/ghc-8.8.2/include/ghcversion.h:
   hash: 3917cf8a87b348f375c0535573a693e4819d3baa7f696a6ba9bf40e5a4d9a7f2
-? /home/kevin/Documents/UNI/2020/FIT2102/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/staticgame/autogen/Paths_rummy.hs
-: hash: a321fa7d2a0a7fbb7e07f5b19d310cecd8b89afef1835d6a0309db156a8ea9c0
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/rummy.cabal:
-  hash: 583e7400d24d694f9749c0584cdeaa44edf447297da929b5c422bb716690da91
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/package.yaml:
-  hash: 4dbe5eab7da8d8aa37d74c914fa150a8d28585a1d0d5cebc4de4338890ac957c
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/submission/Player.hs:
-  hash: 1ebc995c8092ce2d46c4adf024fc5794f1b143b1f1a8d438b4fb67376a40eab4
+/home/kevin/Documents/UNI/2020/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/staticgame/autogen/Paths_rummy.hs:
+  hash: a321fa7d2a0a7fbb7e07f5b19d310cecd8b89afef1835d6a0309db156a8ea9c0
 /usr/include/stdc-predef.h:
   hash: 64fdf694f7b3d51ec6c45c06dcb71ebbe9455742d3ea673012016668853d3bff
+/home/kevin/Documents/UNI/2020/asgn2/rummy.cabal:
+  hash: 583e7400d24d694f9749c0584cdeaa44edf447297da929b5c422bb716690da91
+/home/kevin/Documents/UNI/2020/asgn2/submission/Player.hs:
+  hash: 6af7034e2ccb91084da1d3848dfdee962a6efea7a1abef58d1215c8aeb461e94

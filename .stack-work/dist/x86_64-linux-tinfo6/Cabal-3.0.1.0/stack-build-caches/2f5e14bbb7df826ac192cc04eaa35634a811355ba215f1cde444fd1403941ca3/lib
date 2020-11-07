@@ -1,28 +1,28 @@
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/EitherIO.hs:
-  hash: 407543a4f2e353ee48548c52c04f3b094acd1355356677b31ce71d13f673eb3b
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Parser/Instances.hs:
-  hash: 1b81bbe457cf8d53c15ac33eb0056170aeac052a0796eff476cedbd5897ad510
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Cards.hs:
+/home/kevin/Documents/UNI/2020/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/autogen/Paths_rummy.hs:
+  hash: 451d429555a61ff194afec66e719d16ae1ed59b8d1cb865ee7b453b6c3a46b31
+/home/kevin/Documents/UNI/2020/asgn2/src/Cards.hs:
   hash: 1b734768116e9326587edc75e6db20ee93603940b117178ff9dc3ddc59e1be9e
+/home/kevin/Documents/UNI/2020/asgn2/package.yaml:
+  hash: 4dbe5eab7da8d8aa37d74c914fa150a8d28585a1d0d5cebc4de4338890ac957c
 /home/kevin/.stack/programs/x86_64-linux/ghc-tinfo6-8.8.2/lib/ghc-8.8.2/include/ghcversion.h:
   hash: 3917cf8a87b348f375c0535573a693e4819d3baa7f696a6ba9bf40e5a4d9a7f2
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/rummy.cabal:
-  hash: 583e7400d24d694f9749c0584cdeaa44edf447297da929b5c422bb716690da91
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/package.yaml:
-  hash: 4dbe5eab7da8d8aa37d74c914fa150a8d28585a1d0d5cebc4de4338890ac957c
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/autogen/cabal_macros.h:
+/home/kevin/Documents/UNI/2020/asgn2/src/Rummy/Play.hs:
+  hash: 547184a2203795440384177949c177034f52952a7fef6cd6f846d4b7932cb296
+/home/kevin/Documents/UNI/2020/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/autogen/cabal_macros.h:
   hash: af5886489d0ca756cd7c1fed050729b3c39df47cd34b387850bc13fc6ad9eded
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Deck.hs:
+/home/kevin/Documents/UNI/2020/asgn2/src/Deck.hs:
   hash: 8a5075c4094f3f2345cf04a95d176b3836972c61bbba98a7c8dc652d92c03584
+/home/kevin/Documents/UNI/2020/asgn2/src/Rummy/Rules.hs:
+  hash: 8aa662e20e9a07a4c47885dabd02bae53759a47e39a7e037fd723c99239c7259
 /usr/include/stdc-predef.h:
   hash: 64fdf694f7b3d51ec6c45c06dcb71ebbe9455742d3ea673012016668853d3bff
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Rummy/Types.hs:
-  hash: cb6edde22c0feca0df2b467b6172468351a7325965d3af02a9f9f6161597ef46
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Parser/Parser.hs:
+/home/kevin/Documents/UNI/2020/asgn2/src/Parser/Parser.hs:
   hash: c781446adf485ed01c61bdce0d72dc600455891f53f89eebbf47322d7b212014
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Rummy/Play.hs:
-  hash: 547184a2203795440384177949c177034f52952a7fef6cd6f846d4b7932cb296
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/src/Rummy/Rules.hs:
-  hash: 8aa662e20e9a07a4c47885dabd02bae53759a47e39a7e037fd723c99239c7259
-/home/kevin/Documents/UNI/2020/FIT2102/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/autogen/Paths_rummy.hs:
-  hash: 451d429555a61ff194afec66e719d16ae1ed59b8d1cb865ee7b453b6c3a46b31
+/home/kevin/Documents/UNI/2020/asgn2/src/Parser/Instances.hs:
+  hash: 1b81bbe457cf8d53c15ac33eb0056170aeac052a0796eff476cedbd5897ad510
+/home/kevin/Documents/UNI/2020/asgn2/src/Rummy/Types.hs:
+  hash: cb6edde22c0feca0df2b467b6172468351a7325965d3af02a9f9f6161597ef46
+/home/kevin/Documents/UNI/2020/asgn2/rummy.cabal:
+  hash: 583e7400d24d694f9749c0584cdeaa44edf447297da929b5c422bb716690da91
+/home/kevin/Documents/UNI/2020/asgn2/src/EitherIO.hs:
+  hash: 407543a4f2e353ee48548c52c04f3b094acd1355356677b31ce71d13f673eb3b

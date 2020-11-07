@@ -8,6 +8,34 @@ import Rummy.Types   -- Here you will find types used in the game of Rummy
 import Cards         -- Finally, the generic card type(s)
 -- You can add more imports if you need them
 
+pickCard :: ActionFunc
+pickCard card _ memory opp hand
+  | takeDiscard = (Discard, "hey")
+  | otherwise = (Stock, "hey")
+  where takeDiscard = completesMeld hand card
+        newMemory = if isNothing memory then initMem takeDiscard card else createNewMemory
+        createNewMemory = initMem takeDiscard card
+
+-- | This function is called once you have drawn a card, you need to decide
+-- which action to call.
+playCard :: PlayFunc
+playCard card _ memory hand
+  | gin = (Action Gin dropCard, newMemory)
+  | knock = (Action Knock dropCard, newMemory)
+  | otherwise = (Action Drop dropCard, newMemory)
+  where dropCard = dropHighCard (hand)
+        newHand = removeElements (card:hand) [dropCard]
+        gin = canGin newHand
+        knock = canKnock newHand
+        newMemory = "hey"
+
+--  where card = highestCard.(removeElements hand )(createBestMeld hand)
+-- | This function is called at the end of the game when you need to return the
+-- melds you formed with your last hand.
+makeMelds :: MeldFunc
+makeMelds _ _ hand = assembleMeld (createBestMeld hand) hand
+
+
 instance Show Suit where
   show Spade = "S"
   show Club = "C"
@@ -43,7 +71,12 @@ data Memory = Memory { discard :: [Card]
                      , oppTake :: [Card]
                      , oppNoWant :: [Card]
                       } deriving (Show)
-
+-- | This function initialises memory on the first turn
+-- Example:
+-- >>> initMem True (Card Spade Ace)
+initMem :: Bool -> Card ->  Memory
+initMem True _  = Memory {discard = [], oppTake = [], oppNoWant = []}
+initMen False card  = Memory {discard = [card], oppTake = [], oppNoWant = []}
 -- | This function turns a list of cards into the string memory
 makeMem :: [Card] -> String
 makeMem cards = foldl (\acc curr -> acc ++ show curr) "" cards
@@ -61,10 +94,15 @@ memoryParser = sepby (list cardParser) (is '/')
 memoryToString :: Memory -> String
 memoryToString memory = makeMem(discard memory) ++ "/" ++ makeMem(oppTake memory) ++ "/" ++ makeMem(oppNoWant memory)
 
--- | This
-stringToListMemory :: Input -> [[Card]]
-stringToListMemory string = getMem (parse (sepby (list cardParser) (is '/')) string)
+-- | This converts the memory string into a list of cards
+-- Examples:
+-- >>> a = Just "SA/SA/SA"
+-- >>>stringToListMemory a
+-- [[(SA)],[(SA)],[(SA)]]
 
+stringToListMemory :: Maybe Input -> [[Card]]
+stringToListMemory (Just string) = getMem (parse (sepby (list cardParser) (is '/')) string)
+stringToListMemory Nothing = [[]]
 listMemoryToMemory :: [[Card]] -> Memory
 listMemoryToMemory lmem = case lmem of
                         (c1:c2:c3:[]) -> Memory c1 c2 c3
@@ -124,29 +162,7 @@ sepby1 p s =
         ;pure (v:w)}
 
 
-pickCard :: ActionFunc
-pickCard card _ memory opp hand
-  | completesMeld hand card = (Discard, "hey")
-  | otherwise = (Stock, "hey")
 
--- | This function is called once you have drawn a card, you need to decide
--- which action to call.
-playCard :: PlayFunc
-playCard card _ memory hand
-  | gin = (Action Gin dropCard, newMemory)
-  | knock = (Action Knock dropCard, newMemory)
-  | otherwise = (Action Drop dropCard, newMemory)
-  where dropCard = dropHighCard (hand)
-        newHand = removeElements (card:hand) [dropCard]
-        gin = canGin newHand
-        knock = canKnock newHand
-        newMemory = "hey"
-
---  where card = highestCard.(removeElements hand )(createBestMeld hand)
--- | This function is called at the end of the game when you need to return the
--- melds you formed with your last hand.
-makeMelds :: MeldFunc
-makeMelds _ _ hand = assembleMeld (createBestMeld hand) hand
 -- | This function chooses the highest deadwood card to drop
 -- TODO: THIS CAN BREAK IF YOU HAVE A GIN WITH THE EXTRA CARD (I mean it might wrongly pick the highest card. In the case that the whole hand is a Gin, just drop the card that you just picked up or drop a card from a 4/5 meld)
 -- Examples:
