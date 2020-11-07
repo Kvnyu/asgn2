@@ -10,24 +10,30 @@ import Cards         -- Finally, the generic card type(s)
 
 pickCard :: ActionFunc
 pickCard card _ memory opp hand
-  | takeDiscard = (Discard, "hey")
-  | otherwise = (Stock, "hey")
+  | takeDiscard = (Discard, serMemory)
+  | otherwise = (Stock, serMemory)
   where takeDiscard = completesMeld hand card
-        newMemory = if isNothing memory then initMem takeDiscard card else createNewMemory
-        createNewMemory = initMem takeDiscard card
+        desMemory = maybeStringToListMemory memory
+        serMemory = memoryToString desMemory
+
+
+
+
 
 -- | This function is called once you have drawn a card, you need to decide
 -- which action to call.
 playCard :: PlayFunc
 playCard card _ memory hand
-  | gin = (Action Gin dropCard, newMemory)
-  | knock = (Action Knock dropCard, newMemory)
-  | otherwise = (Action Drop dropCard, newMemory)
+  | gin = (Action Gin dropCard, serMemory)
+  | knock = (Action Knock dropCard, serMemory)
+  | otherwise = (Action Drop dropCard, serMemory)
   where dropCard = dropHighCard (hand)
         newHand = removeElements (card:hand) [dropCard]
         gin = canGin newHand
         knock = canKnock newHand
-        newMemory = "hey"
+        desMemory = stringToListMemory memory
+        serMemory = memoryToString desMemory
+
 
 --  where card = highestCard.(removeElements hand )(createBestMeld hand)
 -- | This function is called at the end of the game when you need to return the
@@ -57,7 +63,7 @@ instance Show Rank where
   show King = "K"
 
 instance Show Card where
-  show (Card s r) = "(" ++ show s ++ show r ++ ")"
+  show (Card s r) = show s ++ show r
 
 instance Show Meld where
   show (Deadwood c1) = "DW" ++ show c1
@@ -71,42 +77,52 @@ data Memory = Memory { discard :: [Card]
                      , oppTake :: [Card]
                      , oppNoWant :: [Card]
                       } deriving (Show)
--- | This function initialises memory on the first turn
--- Example:
--- >>> initMem True (Card Spade Ace)
-initMem :: Bool -> Card ->  Memory
-initMem True _  = Memory {discard = [], oppTake = [], oppNoWant = []}
-initMen False card  = Memory {discard = [card], oppTake = [], oppNoWant = []}
--- | This function turns a list of cards into the string memory
-makeMem :: [Card] -> String
-makeMem cards = foldl (\acc curr -> acc ++ show curr) "" cards
+addDiscard :: Card -> Memory -> Memory
+addDiscard card mem = Memory {discard = card:(discard mem), oppTake = oppTake mem, oppNoWant = oppNoWant mem}
 
--- | This function gets the value out of a parser, credit to the parsercombinators notes
-getMem :: ParseResult a -> a
-getMem (Result _ cs) = cs
-getMem (Error _) = error "Hopefully it never comes to this"
-
--- | This function combines the list parser and cardParser to parse the memory
-memoryParser :: Parser [[Card]]
-memoryParser = sepby (list cardParser) (is '/')
 
 -- | This converts a memory data type to a string
+-- >>> a = Memory [Card Spade Ace] [Card Spade Ace] [Card Spade Ace, Card Diamond Two]
+-- >>>memoryToString a
+-- "SA/SA/SAD2"
 memoryToString :: Memory -> String
 memoryToString memory = makeMem(discard memory) ++ "/" ++ makeMem(oppTake memory) ++ "/" ++ makeMem(oppNoWant memory)
 
+maybeStringToListMemory :: Maybe Input -> Memory
+maybeStringToListMemory (Just string) = stringToListMemory string
+maybeStringToListMemory Nothing = listMemoryToMemory [[],[],[]]
+
+
+
+
 -- | This converts the memory string into a list of cards
 -- Examples:
--- >>> a = Just "SA/SA/SA"
+-- >>> a = Just "SA/SA/SAD2"
 -- >>>stringToListMemory a
--- [[(SA)],[(SA)],[(SA)]]
+-- Memory {discard = [SA], oppTake = [SA], oppNoWant = [SA,D2]}
 
-stringToListMemory :: Maybe Input -> [[Card]]
-stringToListMemory (Just string) = getMem (parse (sepby (list cardParser) (is '/')) string)
-stringToListMemory Nothing = [[]]
+
+stringToListMemory :: Input -> Memory
+stringToListMemory string = listMemoryToMemory $ getMem (parse (sepby (list cardParser) (is '/')) string)
+
+
 listMemoryToMemory :: [[Card]] -> Memory
 listMemoryToMemory lmem = case lmem of
                         (c1:c2:c3:[]) -> Memory c1 c2 c3
                         _ -> Memory [] [] []
+-- | This function turns a list of cards into the string memory
+-- Example:
+-- >>> makeMem [Card Spade Ace, Card Spade Two, Card Diamond Three]
+--"SAS2D3"
+makeMem :: [Card] -> String
+makeMem cards = foldl (\acc curr -> acc ++ show curr) "" cards
+
+-- | This function gets the value out of a parser, credit to the parsercombinators notes
+
+getMem :: ParseResult a -> a
+getMem (Result _ cs) = cs
+getMem (Error _) = error "Hopefully it never comes to this"
+
 -- | Hardcoded Char -> Suit
 suitParser :: Parser Suit
 suitParser = (is 'S' >> pure Spade) |||
@@ -131,7 +147,7 @@ rankParser = (is 'A' >> pure Ace) |||
 -- | This function parses a card by combining the suit parser and rank parser
 -- Examples:
 -- >>>parse cardParser "SA"
--- Result >< (SA)
+-- Result >< SA
 cardParser ::  Parser Card
 cardParser = do  x <- suitParser
                  y <- rankParser
@@ -168,7 +184,7 @@ sepby1 p s =
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Jack, Card Spade Queen, Card Diamond Eight, Card Spade King, Card Diamond Jack, Card Club Ten]
 -- >>>dropHighCard a
--- (DJ)
+-- DJ
 dropHighCard :: [Card] -> Card
 dropHighCard hand =  highestCard . removeElements hand $ melds
   where melds = if createBestMeld hand == [] then [] else head (createBestMeld hand)
@@ -214,9 +230,9 @@ canKnock hand = findMinDeadwood tree < 10
 -- Examples:
 --
 -- >>>sortRank[Card Spade Two, Card Spade Ace, Card Heart Ace, Card Diamond Jack, Card Club Eight]
--- [(SA),(S2),(C8),(DJ),(HA)]
+-- [SA,S2,C8,DJ,HA]
 -- >>>sortRank[Card Spade Nine, Card Heart Eight, Card Spade Six, Card Heart Five, Card Spade Jack]
--- [(S6),(S9),(SJ),(H5),(H8)]
+-- [S6,S9,SJ,H5,H8]
 -- >>>sortRank[]
 -- []
 
@@ -234,7 +250,7 @@ showRank (Card _ r1) = show r1
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade King, Card Spade Queen, Card Diamond Ten, Card Diamond Jack, Card Club Jack, Card Club Six]
 -- >>>sortRank a
--- [(SA),(SQ),(SK),(C6),(CJ),(DT),(DJ)]
+-- [SA,SQ,SK,C6,CJ,DT,DJ]
 sortRank :: [Card] -> [Card]
 sortRank cards = sort cards
 
@@ -243,9 +259,9 @@ sortRank cards = sort cards
 -- Examples:
 --
 -- >>>sortSuit [Card Spade Two, Card Heart Two, Card Spade Ace, Card Club Ace, Card Diamond Jack, Card Club Eight, Card Spade Jack, Card Diamond Ace]
--- [(SA),(CA),(DA),(S2),(H2),(C8),(SJ),(DJ)]
+-- [SA,CA,DA,S2,H2,C8,SJ,DJ]
 -- >>>sortSuit[Card Spade Nine, Card Heart Eight, Card Spade Six, Card Heart Five, Card Spade Jack]
--- [(H5),(S6),(H8),(S9),(SJ)]
+-- [H5,S6,H8,S9,SJ]
 -- >>>sortSuit []
 -- []
 
@@ -283,7 +299,7 @@ equalSuit (Card s1 _) (Card s2 _) = s1 == s2
 --
 -- >>>let a = [Card Spade Ace, Card Spade King, Card Spade Queen, Card Diamond Ten, Card Diamond Jack, Card Club Jack, Card Club Six]
 -- >>>highestCard a
--- (SK)
+--SK
 highestCard :: [Card] -> Card
 highestCard hand = last $ sortSuit hand
 
@@ -326,7 +342,7 @@ isSet (x:xs) = equalRank x (head xs) && isSet xs
 --
 -- Examples:
 -- >>>generateGroups [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five] 3
--- [[(SA),(S2),(S3)],[(S2),(S3),(S4)],[(S3),(S4),(S5)]]
+-- [[SA,S2,S3],[S2,S3,S4],[S3,S4,S5]]
 -- >>>generateGroups [] 3
 -- []
 generateGroups :: [Card] -> Int -> [[Card]]
@@ -337,10 +353,10 @@ generateGroups cards n = if length cards >= n then take n cards : generateGroups
 -- Examples:
 -- >>>let a = generateGroups[Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five] 3
 -- >>>filterRuns a
--- [[(SA),(S2),(S3)],[(S2),(S3),(S4)],[(S3),(S4),(S5)]]
+-- [[SA,S2,S3],[S2,S3,S4],[S3,S4,S5]]
 -- >>>let b = generateGroups[Card Spade Ace, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Seven] 3
 -- >>>filterRuns b
--- [[(S3),(S4),(S5)]]
+-- [[S3,S4,S5]]
 -- >>>filterRuns []
 -- []
 
@@ -352,11 +368,11 @@ filterRuns cardL = filter isRun cardL
 -- Examples:
 -- >>>let a = generateGroups[Card Spade Ace , Card Heart Ace, Card Club Ace, Card Diamond Ace, Card Heart Two, Card Club Two, Card Diamond Two , Card Club Three] 3
 -- >>>filterSets a
--- [[(SA),(HA),(CA)],[(HA),(CA),(DA)],[(H2),(C2),(D2)]]
+-- [[SA,HA,CA],[HA,CA,DA],[H2,C2,D2]]
 --
 -- >>>let b = generateGroups[Card Spade Ace , Card Heart Ace, Card Club Ace, Card Diamond Ace, Card Heart Two, Card Club Two, Card Diamond Two , Card Club Three] 4
 -- >>>filterSets b
--- [[(SA),(HA),(CA),(DA)]]
+-- [[SA,HA,CA,DA]]
 
 
 filterSets :: [[Card]] -> [[Card]]
@@ -367,10 +383,10 @@ filterSets cardL = filter isSet cardL
 -- Examples:
 -- >>>let a = [[Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace]]
 -- >>>generateCombinations a
--- [[(SA),(HA),(CA)],[(SA),(HA),(DA)],[(SA),(CA),(DA)],[(HA),(CA),(DA)]]
+-- [[SA,HA,CA],[SA,HA,DA],[SA,CA,DA],[HA,CA,DA]]
 -- >>>let b = [[Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace], [Card Club Ace, Card Diamond Ace, Card Heart Ace]]
 -- >>>generateCombinations b
--- [[(CA),(DA),(HA)],[(SA),(HA),(CA)],[(SA),(HA),(DA)],[(SA),(CA),(DA)],[(HA),(CA),(DA)]]
+-- [[CA,DA,HA],[SA,HA,CA],[SA,HA,DA],[SA,CA,DA],[HA,CA,DA]]
 
 generateCombinations :: [[Card]] -> [[Card]]
 generateCombinations cardL = nub (foldl (\acc curr -> if setOfLengthFour curr then combinations curr 3 ++ acc else curr:acc) [] cardL)
@@ -380,7 +396,7 @@ generateCombinations cardL = nub (foldl (\acc curr -> if setOfLengthFour curr th
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace]
 -- >>>combinations a 3
--- [[(SA),(HA),(CA)],[(SA),(HA),(DA)],[(SA),(CA),(DA)],[(HA),(CA),(DA)]]
+-- [[SA,HA,CA],[SA,HA,DA],[SA,CA,DA],[HA,CA,DA]]
 combinations :: [Card] -> Int -> [[Card]]
 combinations cards n = filter ((n==).length) $ subsequences cards
 
@@ -389,7 +405,7 @@ combinations cards n = filter ((n==).length) $ subsequences cards
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace,Card Club Two, Card Club Three, Card Diamond Four, Card Club Five, Card Club Six]
 -- >>>buildMelds a
--- [[(SA),(CA),(DA)],[(SA),(CA),(HA)],[(SA),(DA),(HA)],[(CA),(DA),(HA)],[(CA),(C2),(C3)]]
+-- [[SA,CA,DA],[SA,CA,HA],[SA,DA,HA],[CA,DA,HA],[CA,C2,C3]]
 
 buildMelds :: [Card] -> [[Card]]
 buildMelds hand = nub (sets ++ runs)
@@ -411,7 +427,7 @@ isSubsetOf h1 h2 = all (flip elem h2) h1
 -- >>>let a = [Card Spade Ace, Card Heart Ace]
 -- >>>let b = [Card Spade Ace, Card Heart Ace, Card Diamond Ace, Card Club Two]
 -- >>>removeElements b a
--- [(DA),(C2)]
+-- [DA,C2]
 removeElements :: [Card] -> [Card] -> [Card]
 removeElements h1 h2 = filter (flip notElem h2) h1
 
@@ -452,7 +468,8 @@ data RoseTree = Node ([Card], [Card]) [RoseTree] deriving Show
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace,Card Club Two, Card Club Three, Card Diamond Four, Card Club Five, Card Club Six]
 -- >>>let b = buildMelds a
 -- >>>buildTree b [] a
--- Node ([],[(SA),(HA),(CA),(DA),(C2),(C3),(D4),(C5),(C6)]) [Node ([(SA),(CA),(DA)],[(HA),(C2),(C3),(D4),(C5),(C6)]) [],Node ([(SA),(CA),(HA)],[(DA),(C2),(C3),(D4),(C5),(C6)]) [],Node ([(SA),(DA),(HA)],[(CA),(C2),(C3),(D4),(C5),(C6)]) [Node ([(CA),(C2),(C3)],[(D4),(C5),(C6)]) []],Node ([(CA),(DA),(HA)],[(SA),(C2),(C3),(D4),(C5),(C6)]) [],Node ([(CA),(C2),(C3)],[(SA),(HA),(DA),(D4),(C5),(C6)]) [Node ([(SA),(DA),(HA)],[(D4),(C5),(C6)]) []]]
+--Node ([],[SA,HA,CA,DA,C2,C3,D4,C5,C6]) [Node ([SA,CA,DA],[HA,C2,C3,D4,C5,C6]) [],Node ([SA,CA,HA],[DA,C2,C3,D4,C5,C6]) [],Node ([SA,DA,HA],[CA,C2,C3,D4,C5,C6]) [Node ([CA,C2,C3],[D4,C5,C6]) []],Node ([CA,DA,HA],[SA,C2,C3,D4,C5,C6]) [],Node ([CA,C2,C3],[SA,HA,DA,D4,C5,C6]) [Node ([SA,DA,HA],[D4,C5,C6]) []]]
+
 
 buildTree :: [[Card]] -> [Card] -> [Card] -> RoseTree
 buildTree melds hand deadwood
@@ -485,7 +502,7 @@ findMinDeadwood (Node (_, _) children) = foldr min 200 $ map findMinDeadwood chi
 -- >>>let c = buildTree b [] a
 -- >>>let d =  findMinDeadwood c
 -- >>>paths c
---[[[],[(SA),(CA),(DA)]],[[],[(SA),(CA),(HA)]],[[],[(SA),(DA),(HA)],[(CA),(C2),(C3)]],[[],[(CA),(DA),(HA)]],[[],[(CA),(C2),(C3)],[(SA),(DA),(HA)]]]
+--[[[],[SA,CA,DA]],[[],[SA,CA,HA]],[[],[SA,DA,HA],[CA,C2,C3]],[[],[CA,DA,HA]],[[],[CA,C2,C3],[SA,DA,HA]]]
 
 paths :: RoseTree -> [[[Card]]]
 paths (Node (hand, _) []) = [[hand]]
@@ -500,7 +517,7 @@ paths (Node (hand,_) children) = map (hand:) $ concat $ map paths children
 -- >>>let d =  findMinDeadwood c
 -- >>>let e = paths c
 -- >>>removeEmptyList e
--- [[[(SA),(CA),(DA)]],[[(SA),(CA),(HA)]],[[(SA),(DA),(HA)],[(CA),(C2),(C3)]],[[(CA),(DA),(HA)]],[[(CA),(C2),(C3)],[(SA),(DA),(HA)]]]
+-- [[[SA,CA,DA]],[[SA,CA,HA]],[[SA,DA,HA],[CA,C2,C3]],[[CA,DA,HA]],[[CA,C2,C3],[SA,DA,HA]]]
 
 removeEmptyList :: [[[Card]]] -> [[[Card]]]
 removeEmptyList cardl = map (filter (/=[])) cardl
@@ -513,7 +530,7 @@ removeEmptyList cardl = map (filter (/=[])) cardl
 -- >>>let e = removeEmptyList $ paths c
 -- >>>let min = findMinDeadwood c
 -- >>>minMelds e a min
--- [[[(SA),(DA),(HA)],[(CA),(C2),(C3)]],[[(CA),(C2),(C3)],[(SA),(DA),(HA)]]]
+-- [[[SA,DA,HA],[CA,C2,C3]],[[CA,C2,C3],[SA,DA,HA]]]
 
 minMelds :: [[[Card]]] -> [Card] -> Int -> [[[Card]]]
 minMelds m hand smallest = (filter ((==smallest).deadwoodCalculator.(removeElements hand).concat) m)
@@ -528,7 +545,7 @@ minMelds m hand smallest = (filter ((==smallest).deadwoodCalculator.(removeEleme
 -- >>>let min = findMinDeadwood c
 -- >>>f = minMelds e a min
 -- >>>assembleMeld (head f) a
---[R3(SA)(S2)(S3),R3(S4)(S5)(S6),R4(S7)(S8)(S9)(ST)]
+--[R3SAS2S3,R3S4S5S6,R4S7S8S9ST]
 
 
 assembleMeld :: [[Card]] -> [Card] -> [Meld]
@@ -543,7 +560,7 @@ maybeFilter (Just _) = True
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace]
 -- >>>createMeld a
---Just S3(SA)(HA)(CA)
+--Just S3SAHACA
 createMeld :: [Card] -> Maybe Meld
 createMeld [c1] = Just $ Deadwood c1
 createMeld three@(c1:c2:c3:[]) = if isSet three then Just $ Set3 c1 c2 c3 else Just $ Straight3 c1 c2 c3
@@ -556,7 +573,7 @@ createMeld (_:_:_:_:_:_:_) = Nothing
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
 -- >>>createBestMeld a
---[[(SA),(S2),(S3)],[(S4),(S5),(S6)],[(S7),(S8),(S9),(ST)]]
+--[[SA,S2,S3],[S4,S5,S6],[S7,S8,S9,ST]]
 createBestMeld :: [Card] -> [[Card]]
 createBestMeld hand =  head (minMelds (removeEmptyList $ paths tree) hand (findMinDeadwood tree))
   where tree = buildTree (buildMelds hand) [] hand

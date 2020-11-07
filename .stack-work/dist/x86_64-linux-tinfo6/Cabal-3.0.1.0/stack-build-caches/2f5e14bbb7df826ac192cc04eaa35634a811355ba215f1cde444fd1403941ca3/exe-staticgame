@@ -7,10 +7,10 @@
 /home/kevin/.stack/programs/x86_64-linux/ghc-tinfo6-8.8.2/lib/ghc-8.8.2/include/ghcversion.h:
   hash: 3917cf8a87b348f375c0535573a693e4819d3baa7f696a6ba9bf40e5a4d9a7f2
 /home/kevin/Documents/UNI/2020/asgn2/.stack-work/dist/x86_64-linux-tinfo6/Cabal-3.0.1.0/build/staticgame/autogen/Paths_rummy.hs:
-  hash: a321fa7d2a0a7fbb7e07f5b19d310cecd8b89afef1835d6a0309db156a8ea9c0
+  hash: c0c9049bf432b5ff0989b5ca81407ec2c2eb7119e0e29f91f1369da200fa265f
 /usr/include/stdc-predef.h:
   hash: 64fdf694f7b3d51ec6c45c06dcb71ebbe9455742d3ea673012016668853d3bff
 /home/kevin/Documents/UNI/2020/asgn2/rummy.cabal:
   hash: 583e7400d24d694f9749c0584cdeaa44edf447297da929b5c422bb716690da91
 /home/kevin/Documents/UNI/2020/asgn2/submission/Player.hs:
-  hash: 6af7034e2ccb91084da1d3848dfdee962a6efea7a1abef58d1215c8aeb461e94
+  hash: 5b5f6fd0cf80d8194f610263f71c701f381c129993f04656d13f421074a484d0
