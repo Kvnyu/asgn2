@@ -8,16 +8,42 @@ import Rummy.Types   -- Here you will find types used in the game of Rummy
 import Cards         -- Finally, the generic card type(s)
 -- You can add more imports if you need them
 
+-- | This function updates the memory using the data about the opponent drawing
+-- Examples:
+-- >>> let a = Just Discard
+-- >>> let b = Memory [Card Spade Ace, Card Diamond Two]  [Card Spade Nine]  [Card Spade Jack]
+-- >>> oppDrawUpdateMemory a b
+--Memory {discard = [SA], oppTake = [S9,D2], oppNoWant = [SJ]}
+-- >>>let c = Just Stock
+-- >>>oppDrawUpdateMemory c b
+--Memory {discard = [SA,D2], oppTake = [S9], oppNoWant = [SJ,D2]}
+
+oppDrawUpdateMemory :: Maybe Draw -> Memory -> Memory
+oppDrawUpdateMemory (Just Discard) (mem) = Memory {discard = init (discard mem), oppTake = (oppTake mem) ++ discardTopCard mem, oppNoWant = oppNoWant mem}
+oppDrawUpdateMemory (Just Stock) (mem) = Memory {discard = discard mem, oppTake = oppTake mem, oppNoWant = (oppNoWant mem) ++ discardTopCard mem}
+oppDrawUpdateMemory Nothing mem = mem
+
+discardTopCard :: Memory -> [Card]
+discardTopCard mem = if length (discard mem) == 0 then [] else [last (discard mem)]
+-- | Adds the opponent's discard to the memory
+-- >>> let b = Memory [Card Spade Ace, Card Diamond Two]  [Card Spade Nine]  [Card Spade Jack]
+-- >>>addDiscard True (Card Spade King) b
+-- Memory {discard = [SA,D2], oppTake = [S9], oppNoWant = [SJ,SK]}
+-- >>>addDiscard False (Card Spade King) b
+-- Memory {discard = [SA,D2,SK], oppTake = [S9], oppNoWant = [SJ,SK]}
+
+addDiscard :: Bool -> Card -> Memory -> Memory
+addDiscard takeDiscard card mem = Memory {discard = (discard mem) ++ (if takeDiscard then [] else [card]), oppTake = oppTake mem, oppNoWant = (oppNoWant mem) ++ [card]}
+
 pickCard :: ActionFunc
 pickCard card _ memory opp hand
   | takeDiscard = (Discard, serMemory)
   | otherwise = (Stock, serMemory)
   where takeDiscard = completesMeld hand card
         desMemory = maybeStringToListMemory memory
-        serMemory = memoryToString desMemory
-
-
-
+        drawMemory = oppDrawUpdateMemory opp desMemory
+        discardMemory = addDiscard takeDiscard card drawMemory
+        serMemory = memoryToString discardMemory
 
 
 -- | This function is called once you have drawn a card, you need to decide
@@ -77,8 +103,8 @@ data Memory = Memory { discard :: [Card]
                      , oppTake :: [Card]
                      , oppNoWant :: [Card]
                       } deriving (Show)
-addDiscard :: Card -> Memory -> Memory
-addDiscard card mem = Memory {discard = card:(discard mem), oppTake = oppTake mem, oppNoWant = oppNoWant mem}
+
+
 
 
 -- | This converts a memory data type to a string
@@ -88,19 +114,20 @@ addDiscard card mem = Memory {discard = card:(discard mem), oppTake = oppTake me
 memoryToString :: Memory -> String
 memoryToString memory = makeMem(discard memory) ++ "/" ++ makeMem(oppTake memory) ++ "/" ++ makeMem(oppNoWant memory)
 
+-- | This converts the memory string into a list of cards
+-- Examples:
+-- >>> a = Just "SA/SA/SAD2"
+-- >>>maybeStringToListMemory a
+-- Memory {discard = [SA], oppTake = [SA], oppNoWant = [SA,D2]}
 maybeStringToListMemory :: Maybe Input -> Memory
 maybeStringToListMemory (Just string) = stringToListMemory string
 maybeStringToListMemory Nothing = listMemoryToMemory [[],[],[]]
 
-
-
-
 -- | This converts the memory string into a list of cards
 -- Examples:
--- >>> a = Just "SA/SA/SAD2"
+-- >>> a = "SA/SA/SAD2"
 -- >>>stringToListMemory a
 -- Memory {discard = [SA], oppTake = [SA], oppNoWant = [SA,D2]}
-
 
 stringToListMemory :: Input -> Memory
 stringToListMemory string = listMemoryToMemory $ getMem (parse (sepby (list cardParser) (is '/')) string)

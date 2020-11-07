@@ -49,3 +49,10 @@ getMeld meldsl hand min = filter ((min ==).(flip meldsDeadwood hand)) meldsl
 [[],[(S5),(S6),(S7),(S8),(S9)],[(SA),(S2),(S3)],[(S5),(S6),(S7),(S8),(S9)],[(S2),(S3),(S4)],[(S5),(S6),(S7),(S8),(S9)],[(SA),(S2),(S3),(S4)]]
 ,[[],[(S6),(S7),(S8),(S9),(S10)],[(SA),(S2),(S3)],[(S6),(S7),(S8),(S9),(S10)],[(S2),(S3),(S4)],[(S6),(S7),(S8),(S9),(S10)],[(S3),(S4),(S5)],[(S6),(S7),(S8),(S9),(S10)],[(SA),(S2),(S3),(S4)],[(S6),(S7),(S8),(S9),(S10)],[(S2),(S3),(S4),(S5)],[(S6),(S7),(S8),(S9),(S10)],[(SA),(S2),(S3),(S4),(S5)]]
 ]
+
+data Memory = Memory { discard :: [Card]
+                     , oppTake :: [Card]
+                     , oppNoWant :: [Card]
+                      } deriving (Show)
+addDiscard :: Card -> Memory -> Memory
+addDiscard card mem = Memory {discard = card:(discard mem), oppTake = oppTake mem, oppNoWant = oppNoWant mem}
