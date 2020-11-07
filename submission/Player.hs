@@ -1,4 +1,3 @@
-
 module Player where
 import Data.Maybe
 import Prelude
@@ -44,6 +43,32 @@ data Memory = Memory { discard :: [Card]
                      , oppTake :: [Card]
                      , oppNoWant :: [Card]
                       } deriving (Show)
+
+-- | This function turns a list of cards into the string memory
+makeMem :: [Card] -> String
+makeMem cards = foldl (\acc curr -> acc ++ show curr) "" cards
+
+-- | This function gets the value out of a parser, credit to the parsercombinators notes
+getMem :: ParseResult a -> a
+getMem (Result _ cs) = cs
+getMem (Error _) = error "Hopefully it never comes to this"
+
+-- | This function combines the list parser and cardParser to parse the memory
+memoryParser :: Parser [[Card]]
+memoryParser = sepby (list cardParser) (is '/')
+
+-- | This converts a memory data type to a string
+memoryToString :: Memory -> String
+memoryToString memory = makeMem(discard memory) ++ "/" ++ makeMem(oppTake memory) ++ "/" ++ makeMem(oppNoWant memory)
+
+-- | This
+stringToListMemory :: Input -> [[Card]]
+stringToListMemory string = getMem (parse (sepby (list cardParser) (is '/')) string)
+
+listMemoryToMemory :: [[Card]] -> Memory
+listMemoryToMemory lmem = case lmem of
+                        (c1:c2:c3:[]) -> Memory c1 c2 c3
+                        _ -> Memory [] [] []
 -- | Hardcoded Char -> Suit
 suitParser :: Parser Suit
 suitParser = (is 'S' >> pure Spade) |||
@@ -68,6 +93,7 @@ rankParser = (is 'A' >> pure Ace) |||
 -- | This function parses a card by combining the suit parser and rank parser
 -- Examples:
 -- >>>parse cardParser "SA"
+-- Result >< (SA)
 cardParser ::  Parser Card
 cardParser = do  x <- suitParser
                  y <- rankParser
@@ -90,27 +116,14 @@ sepby :: Parser a -> Parser s -> Parser [a]
 sepby p s = (sepby1 p s) ||| pure []
 -- | This function produces a non-empty list of values coming off a given parser separated bty the second parser
 -- Credit to week11 workshop
+
 sepby1 :: Parser a -> Parser s -> Parser [a]
 sepby1 p s =
     do {v <- p
         ;w <- list (s *> p)
         ;pure (v:w)}
 
--- | This function turns a list of cards into the string memory
-makeMem :: [Card] -> String
-makeMem cards = foldl (\acc curr -> acc ++ show curr) "" cards
 
--- | This function gets the value out of a parser, credit to the parsercombinators notes
-getMem :: ParseResult a -> a
-getMem (Result _ cs) = cs
-getMem (Error _) = error "Hopefully it never comes to this"
-
--- | This function combines the list parser and cardParser to parse the memory
-memoryParser :: Parser [[Card]]
-memoryParser = sepby (list cardParser) (is '/')
-
--- | This card is called at the beginning of your turn, you need to decide which
--- pile to draw from.
 pickCard :: ActionFunc
 pickCard card _ memory opp hand
   | completesMeld hand card = (Discard, "hey")
@@ -205,7 +218,7 @@ showRank (Card _ r1) = show r1
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade King, Card Spade Queen, Card Diamond Ten, Card Diamond Jack, Card Club Jack, Card Club Six]
 -- >>>sortRank a
--- [(SA),(SQ),(SK),(C6),(CJ),(D10),(DJ)]
+-- [(SA),(SQ),(SK),(C6),(CJ),(DT),(DJ)]
 sortRank :: [Card] -> [Card]
 sortRank cards = sort cards
 
@@ -397,8 +410,8 @@ removeElements h1 h2 = filter (flip notElem h2) h1
 -- 8
 cardValue :: Card -> Int
 cardValue c | showRank c == "A" = 1
-            | showRank c `elem` ["10","J","Q","K"] = 10
-            | otherwise =  read $ showRank c
+            | showRank c `elem` ["T", "J", "Q", "K"] = 10
+            | otherwise =  read (showRank c) :: Int
 
 
 
@@ -499,7 +512,7 @@ minMelds m hand smallest = (filter ((==smallest).deadwoodCalculator.(removeEleme
 -- >>>let min = findMinDeadwood c
 -- >>>f = minMelds e a min
 -- >>>assembleMeld (head f) a
---[R3(SA)(S2)(S3),R3(S4)(S5)(S6),S4(S7)(S8)(S9)(S10)]
+--[R3(SA)(S2)(S3),R3(S4)(S5)(S6),R4(S7)(S8)(S9)(ST)]
 
 
 assembleMeld :: [[Card]] -> [Card] -> [Meld]
@@ -514,7 +527,7 @@ maybeFilter (Just _) = True
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace]
 -- >>>createMeld a
--- S3(SA)(HA)(CA)
+--Just S3(SA)(HA)(CA)
 createMeld :: [Card] -> Maybe Meld
 createMeld [c1] = Just $ Deadwood c1
 createMeld three@(c1:c2:c3:[]) = if isSet three then Just $ Set3 c1 c2 c3 else Just $ Straight3 c1 c2 c3
@@ -527,7 +540,7 @@ createMeld (_:_:_:_:_:_:_) = Nothing
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
 -- >>>createBestMeld a
---[[(SA),(S2),(S3)],[(S4),(S5),(S6)],[(S7),(S8),(S9),(S10)]]
+--[[(SA),(S2),(S3)],[(S4),(S5),(S6)],[(S7),(S8),(S9),(ST)]]
 createBestMeld :: [Card] -> [[Card]]
 createBestMeld hand =  head (minMelds (removeEmptyList $ paths tree) hand (findMinDeadwood tree))
   where tree = buildTree (buildMelds hand) [] hand
