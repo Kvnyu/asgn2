@@ -8,7 +8,127 @@ import Rummy.Types   -- Here you will find types used in the game of Rummy
 import Cards         -- Finally, the generic card type(s)
 -- You can add more imports if you need them
 
+instance Show Action where
+  show (Action act card) = (show act) ++ (show card)
 
+instance Show Suit where
+  show Spade = "S"
+  show Club = "C"
+  show Diamond = "D"
+  show Heart = "H"
+instance Show Rank where
+  show Ace = "A"
+  show Two = "2"
+  show Three = "3"
+  show Four = "4"
+  show Five = "5"
+  show Six = "6"
+  show Seven = "7"
+  show Eight = "8"
+  show Nine = "9"
+  show Ten = "T"
+  show Jack = "J"
+  show Queen = "Q"
+  show King = "K"
+
+instance Show Card where
+  show (Card s r) = show s ++ show r
+
+instance Show Meld where
+  show (Deadwood c1) = "DW" ++ show c1
+  show (Set3 c1 c2 c3) = "S3" ++ show c1 ++ show c2 ++ show c3
+  show (Set4 c1 c2 c3 c4) = "S4" ++ show c1 ++ show c2 ++ show c3 ++ show c4
+  show (Straight3 c1 c2 c3) = "R3" ++ show c1 ++ show c2 ++ show c3
+  show (Straight4 c1 c2 c3 c4) = "R4" ++ show c1 ++ show c2 ++ show c3 ++ show c4
+  show (Straight5 c1 c2 c3 c4 c5) = "R5" ++ show c1 ++ show c2 ++ show c3 ++ show c4 ++ show c5
+
+data Memory = Memory { discard :: [Card]
+                     , oppTake :: [Card]
+                     , oppNoWant :: [Card]
+                     , lastHand :: [Card]
+                      } deriving (Show)
+-- |This is the weight data type, for a given card the integer value represents how much the opponent wants that card
+data Weight = Weight {card :: Card, weight :: Int}
+instance Show Weight where
+  show (Weight card int) = show card ++ "-w" ++ show int
+
+data RoseTree = Node ([Card], [Card]) [RoseTree] deriving Show
+
+-- | Hardcoded Char -> Suit
+suitParser :: Parser Suit
+suitParser = (is 'S' >> pure Spade) |||
+              (is 'C' >> pure Club) |||
+              (is 'D' >> pure Diamond) |||
+              (is 'H' >> pure Heart)
+-- | Hardcoded Char -> Rank
+rankParser :: Parser Rank
+rankParser = (is 'A' >> pure Ace) |||
+              (is '2' >> pure Two) |||
+              (is '3' >> pure Three) |||
+              (is '4' >> pure Four) |||
+              (is '5' >> pure Five) |||
+              (is '6' >> pure Six) |||
+              (is '7' >> pure Seven) |||
+              (is '8' >> pure Eight) |||
+              (is '9' >> pure Nine) |||
+              (is 'T' >> pure Ten) |||
+              (is 'J' >> pure Jack) |||
+              (is 'Q' >> pure Queen) |||
+              (is 'K' >> pure King)
+
+pickCard :: ActionFunc
+pickCard card _ memory opp hand
+  | takeDiscard = (Discard, serMemory)
+  | otherwise = (Stock, serMemory)
+  where takeDiscard = completesMeld hand card || completesPair hand card
+        desMemory = maybeStringToListMemory memory
+        drawMemory = oppDrawUpdateMemory opp desMemory
+        discardMemory = addDiscard takeDiscard card drawMemory
+        serMemory = memoryToString discardMemory
+
+
+-- | This function is called once you have drawn a card, you need to decide
+-- which action to call.
+-- >>>let a = Card Spade Jack
+-- >>>let b = (0,0)
+-- >>>let c = "///"
+-- >>>let e = "CACACACACA//"
+-- >>>let d = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
+-- >>>playCard a b c d
+--(DropS7,"S7///SJSAS2S3S4S5S6S8S9ST")
+playCard :: PlayFunc
+playCard card _ memory hand
+  | gin = (Action Gin dropCard, serMemory)
+  | knock = (Action Knock dropCard, serMemory)
+  | otherwise = (Action Drop dropCard, serMemory)
+  where deckWeights = createWeightedDeck
+        discardWeights = discardListAlterCardWeight (oppNoWant newMemory) deckWeights
+        wantWeights = wantListAlterCardWeight (oppTake newMemory) discardWeights
+        dropCard = dropWeightedCard (hand) wantWeights
+        newHand = removeElements (card:hand) [dropCard]
+--      Here I am checking if the current hand is equal to the last hand, to check if we are in the first turn of a new
+--      round and therefore cannot gin/knock
+        gin = (canGin newHand) && ((lastHand desMemory == hand))
+        knock = (canKnock newHand) && ((lastHand desMemory == hand))
+        desMemory = stringToListMemory memory
+        newMemory = if lastHand desMemory /= hand then Memory [] [] [] [] else desMemory
+        discardMemory = Memory ((discard newMemory) ++ [dropCard]) (oppTake newMemory) (oppNoWant newMemory) (lastHand newMemory)
+        handMemory = updateHand discardMemory newHand
+        serMemory = memoryToString handMemory
+
+
+--  where card = highestCard.(removeElements hand )(createBestMeld hand)
+-- | This function is called at the end of the game when you need to return the
+-- melds you formed with your last hand.
+makeMelds :: MeldFunc
+makeMelds _ _ hand = assembleMeld (createBestMeld hand) hand
+
+-- | This function updates the memory using the data about your hand
+-- Examples:
+-- >>> let a = [Card Spade Ace, Card Spade Two]
+-- >>> let memory = Memory [] [] [] []
+-- >>> updateHand memory a
+--Memory {discard = [], oppTake = [], oppNoWant = [], lastHand = [SA,S2]}
 
 
 updateHand :: Memory -> [Card] -> Memory
@@ -56,100 +176,21 @@ addDiscard takeDiscard card mem = Memory {discard = (discard mem) ++ (if takeDis
                                           ,oppTake = oppTake mem
                                           ,oppNoWant = (oppNoWant mem) ++ [card]
                                           ,lastHand = (lastHand mem)}
+-- | This function checks if a card creates a pair in your hand
+-- Example :
+-- >>> let a  = [Card Spade Ace, Card Club Two, Card Diamond Five]
+-- >>> completesPair a (Card Spade Five)
+-- True
+-- >>> completesPair a (Card Spade King)
+-- False
+completesPair :: [Card] -> Card -> Bool
+completesPair hand card =  length (pairCards deadwood) < length( pairCards $ card:deadwood)
+  where melds = if createBestMeld hand == [] then [] else (createBestMeld hand)
+        deadwood = removeElements hand (concat melds)
 
-pickCard :: ActionFunc
-pickCard card _ memory opp hand
-  | takeDiscard = (Discard, serMemory)
-  | otherwise = (Stock, serMemory)
-  where takeDiscard = completesMeld hand card
-        desMemory = maybeStringToListMemory memory
-        drawMemory = oppDrawUpdateMemory opp desMemory
-        discardMemory = addDiscard takeDiscard card drawMemory
-        serMemory = memoryToString discardMemory
-
-instance Show Action where
-  show (Action act card) = (show act) ++ (show card)
--- | This function is called once you have drawn a card, you need to decide
--- which action to call.
--- >>>let a = Card Spade Jack
--- >>>let b = (0,0)
--- >>>let c = "///"
--- >>>let e = "CACACACACA//"
--- >>>let d = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
--- >>>playCard a b c d
---(DropST,"ST///SJSAS2S3S4S5S6S7S8S9")
-playCard :: PlayFunc
-playCard card _ memory hand
-  | gin = (Action Gin dropCard, serMemory)
-  | knock = (Action Knock dropCard, serMemory)
-  | otherwise = (Action Drop dropCard, serMemory)
-  where deckWeights = createWeightedDeck
-        discardWeights = discardListAlterCardWeight (oppNoWant newMemory) deckWeights
-        wantWeights = wantListAlterCardWeight (oppTake newMemory) discardWeights
-        dropCard = dropHighCard (hand) wantWeights
-        newHand = removeElements (card:hand) [dropCard]
---      Here I am checking if the current hand is equal to the last hand, to check if we are in the first turn of a new
---      round and therefore cannot gin/knock
-        gin = (canGin newHand) && ((lastHand desMemory == hand))
-        knock = (canKnock newHand) && ((lastHand desMemory == hand))
-        desMemory = stringToListMemory memory
-        newMemory = if lastHand desMemory /= hand then Memory [] [] [] [] else desMemory
-        discardMemory = Memory ((discard newMemory) ++ [dropCard]) (oppTake newMemory) (oppNoWant newMemory) (lastHand newMemory)
-        handMemory = updateHand discardMemory newHand
-        serMemory = memoryToString handMemory
-
-
---  where card = highestCard.(removeElements hand )(createBestMeld hand)
--- | This function is called at the end of the game when you need to return the
--- melds you formed with your last hand.
-makeMelds :: MeldFunc
-makeMelds _ _ hand = assembleMeld (createBestMeld hand) hand
-
-
-instance Show Suit where
-  show Spade = "S"
-  show Club = "C"
-  show Diamond = "D"
-  show Heart = "H"
-instance Show Rank where
-  show Ace = "A"
-  show Two = "2"
-  show Three = "3"
-  show Four = "4"
-  show Five = "5"
-  show Six = "6"
-  show Seven = "7"
-  show Eight = "8"
-  show Nine = "9"
-  show Ten = "T"
-  show Jack = "J"
-  show Queen = "Q"
-  show King = "K"
-
-instance Show Card where
-  show (Card s r) = show s ++ show r
-
-instance Show Meld where
-  show (Deadwood c1) = "DW" ++ show c1
-  show (Set3 c1 c2 c3) = "S3" ++ show c1 ++ show c2 ++ show c3
-  show (Set4 c1 c2 c3 c4) = "S4" ++ show c1 ++ show c2 ++ show c3 ++ show c4
-  show (Straight3 c1 c2 c3) = "R3" ++ show c1 ++ show c2 ++ show c3
-  show (Straight4 c1 c2 c3 c4) = "R4" ++ show c1 ++ show c2 ++ show c3 ++ show c4
-  show (Straight5 c1 c2 c3 c4 c5) = "R5" ++ show c1 ++ show c2 ++ show c3 ++ show c4 ++ show c5
-
-data Memory = Memory { discard :: [Card]
-                     , oppTake :: [Card]
-                     , oppNoWant :: [Card]
-                     , lastHand :: [Card]
-                      } deriving (Show)
-
-data Weight = Weight {card :: Card, weight :: Int}
-instance Show Weight where
-  show (Weight card int) = show card ++ "-w" ++ show int
 -- | Creates a deck of cards with weight attached to each card
 -- >>>createWeightedDeck
 --[SA-w0,S2-w0,S3-w0,S4-w0,S5-w0,S6-w0,S7-w0,S8-w0,S9-w0,ST-w0,SJ-w0,SQ-w0,SK-w0,CA-w0,C2-w0,C3-w0,C4-w0,C5-w0,C6-w0,C7-w0,C8-w0,C9-w0,CT-w0,CJ-w0,CQ-w0,CK-w0,DA-w0,D2-w0,D3-w0,D4-w0,D5-w0,D6-w0,D7-w0,D8-w0,D9-w0,DT-w0,DJ-w0,DQ-w0,DK-w0,HA-w0,H2-w0,H3-w0,H4-w0,H5-w0,H6-w0,H7-w0,H8-w0,H9-w0,HT-w0,HJ-w0,HQ-w0,HK-w0]
-
 
 createWeightedDeck :: [Weight]
 createWeightedDeck = map (\x -> Weight x 0) createDeck
@@ -171,8 +212,6 @@ findLowestWeightCard :: [Card] -> [Weight] -> Weight
 findLowestWeightCard cardl weights = foldl (\acc curr -> if weight curr < weight acc then curr else acc) (head filteredWeight) filteredWeight
   where filteredWeight = filter (\w -> elem (card w) cardl) weights
 
-
-
 -- | Applies a function to the int weight of a weight datatype
 -- >>>let a = Weight (Card Spade Ace) 2
 -- >>>functionOnCardWeight (+2)  a
@@ -186,9 +225,7 @@ functionOnCardWeight f (Weight card int) =  Weight card $ f int
 -- >>>let a = createWeightedDeck
 -- >>>let b = [Card Spade Seven, Card Diamond Ace, Card Spade Ten, Card Spade Jack, Card Diamond Ten, Card Diamond Jack]
 -- >>>discardListAlterCardWeight b a
---[SA-w-1,S2-w0,S3-w0,S4-w0,S5-w-1,S6-w-1,S7-w-1,S8-w-2,S9-w-3,ST-w-3,SJ-w-3,SQ-w-2,SK-w-1,CA-w-1,C2-w0,C3-w0,C4-w0,C5-w0,
--- C6-w0,C7-w-1,C8-w0,C9-w0,CT-w-2,CJ-w-2,CQ-w0,CK-w0,DA-w-1,D2-w-1,D3-w-1,D4-w0,D5-w0,D6-w0,D7-w-1,D8-w-1,D9-w-2,DT-w-3,DJ-w-3,
--- DQ-w-2,DK-w-1,HA-w-1,H2-w0,H3-w0,H4-w0,H5-w0,H6-w0,H7-w-1,H8-w0,H9-w0,HT-w-2,HJ-w-2,HQ-w0,HK-w0]
+--[SA-w-1,S2-w0,S3-w0,S4-w0,S5-w-1,S6-w-1,S7-w-1,S8-w-2,S9-w-3,ST-w-3,SJ-w-3,SQ-w-2,SK-w-1,CA-w-1,C2-w0,C3-w0,C4-w0,C5-w0,C6-w0,C7-w-1,C8-w0,C9-w0,CT-w-2,CJ-w-2,CQ-w0,CK-w0,DA-w-1,D2-w-1,D3-w-1,D4-w0,D5-w0,D6-w0,D7-w-1,D8-w-1,D9-w-2,DT-w-3,DJ-w-3,DQ-w-2,DK-w-1,HA-w-1,H2-w0,H3-w0,H4-w0,H5-w0,H6-w0,H7-w-1,H8-w0,H9-w0,HT-w-2,HJ-w-2,HQ-w0,HK-w0]
 discardListAlterCardWeight :: [Card] -> [Weight] -> [Weight]
 discardListAlterCardWeight cardl weightl = foldl (\acc curr -> discardAlterCardWeight acc curr) weightl cardl
 
@@ -310,27 +347,7 @@ getMem :: ParseResult a -> a
 getMem (Result _ cs) = cs
 getMem (Error _) = error "Hopefully it never comes to this"
 
--- | Hardcoded Char -> Suit
-suitParser :: Parser Suit
-suitParser = (is 'S' >> pure Spade) |||
-             (is 'C' >> pure Club) |||
-             (is 'D' >> pure Diamond) |||
-             (is 'H' >> pure Heart)
--- | Hardcoded Char -> Rank
-rankParser :: Parser Rank
-rankParser = (is 'A' >> pure Ace) |||
-             (is '2' >> pure Two) |||
-             (is '3' >> pure Three) |||
-             (is '4' >> pure Four) |||
-             (is '5' >> pure Five) |||
-             (is '6' >> pure Six) |||
-             (is '7' >> pure Seven) |||
-             (is '8' >> pure Eight) |||
-             (is '9' >> pure Nine) |||
-             (is 'T' >> pure Ten) |||
-             (is 'J' >> pure Jack) |||
-             (is 'Q' >> pure Queen) |||
-             (is 'K' >> pure King)
+
 -- | This function parses a card by combining the suit parser and rank parser
 -- Examples:
 -- >>>parse cardParser "SA"
@@ -369,26 +386,29 @@ sepby1 p s =
 
 -- | This function chooses the highest deadwood card to drop
 -- Examples:
+-- >>>let w = createWeightedDeck
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Jack, Card Spade Queen, Card Diamond Eight, Card Spade King, Card Diamond Jack, Card Club Ten]
--- >>>dropHighCard a
--- DJ
+-- >>>dropWeightedCard a w
+-- CT
 -- >>>let b = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
 -- >>>let melds = createBestMeld b
--- >>>dropHighCard b
--- ST
+-- >>>dropWeightedCard b w
+-- S7
 
-dropHighCard :: [Card] -> [Weight] -> Card
-dropHighCard hand weights = card $ findLowestWeightCard (if deadWood == [] then (if pairs == [] then bigDiscard melds else pairs) else deadWood ) weights
+dropWeightedCard :: [Card] -> [Weight] -> Card
+dropWeightedCard hand weights = card $ findLowestWeightCard (cards) weights
   where melds = if createBestMeld hand == [] then [] else (createBestMeld hand)
         pairs = pairCards (removeElements hand $ concat melds)
         bigDiscard meld = last $ filter (\x -> length x >=4 ) meld
         deadWood = removeElements hand (pairs ++ (concat melds))
+        cards = if deadWood == [] then (if pairs == [] then bigDiscard melds else pairs) else deadWood
 -- | This function checks whether a card completes a meld in a hand
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Jack, Card Spade Queen, Card Diamond Eight, Card Spade King, Card Diamond Ace, Card Club Ace]
 -- >>>let b = Card Heart Ace
+-- >>>let c = Card Diamond Two
 -- >>>completesMeld a b
--- True-- >>>let c = Card Heart Jack
+-- True
 -- >>>completesMeld a c
 -- False
 -- >>>let d = Card Heart Ten
@@ -399,7 +419,6 @@ completesMeld :: [Card] -> Card -> Bool
 completesMeld hand card = findMinDeadwood (tree (card:hand)) <= (findMinDeadwood $ tree hand)
   where tree:: [Card] -> RoseTree
         tree h = buildTree (buildMelds h) [] h
-
 
 
 -- | This function returns true if you can call gin and false otherwise
@@ -419,17 +438,6 @@ canKnock :: [Card] -> Bool
 canKnock hand = findMinDeadwood tree < 10
   where tree = buildTree (buildMelds hand) [] hand
 
--- | Sort a list of cards on rank and then suit
---
--- Examples:
---
--- >>>sortRank[Card Spade Two, Card Spade Ace, Card Heart Ace, Card Diamond Jack, Card Club Eight]
--- [SA,S2,C8,DJ,HA]
--- >>>sortRank[Card Spade Nine, Card Heart Eight, Card Spade Six, Card Heart Five, Card Spade Jack]
--- [S6,S9,SJ,H5,H8]
--- >>>sortRank[]
--- []
-
 
 -- | Gets the char rank out of a card
 --
@@ -440,8 +448,17 @@ canKnock hand = findMinDeadwood tree < 10
 -- "J"
 showRank :: Card -> String
 showRank (Card _ r1) = show r1
+
 -- | Sort a list of cards on rank and then suit
+--
 -- Examples:
+--
+-- >>>sortRank[Card Spade Two, Card Spade Ace, Card Heart Ace, Card Diamond Jack, Card Club Eight]
+-- [SA,S2,C8,DJ,HA]
+-- >>>sortRank[Card Spade Nine, Card Heart Eight, Card Spade Six, Card Heart Five, Card Spade Jack]
+-- [S6,S9,SJ,H5,H8]
+-- >>>sortRank[]
+-- []
 -- >>>let a = [Card Spade Ace, Card Spade King, Card Spade Queen, Card Diamond Ten, Card Diamond Jack, Card Club Jack, Card Club Six]
 -- >>>sortRank a
 -- [SA,SQ,SK,C6,CJ,DT,DJ]
@@ -474,14 +491,21 @@ sortSuit cards = sortBy (\(Card s1 r1) (Card s2 r2) -> if r1 == r2 then compare 
 -- >>>adjacentCard (Card Spade Ace) (Card Heart Two)
 -- False
 
+
 adjacentCard :: Card -> Card -> Bool
 adjacentCard c1 c2 = adjacentRank c1 c2 && equalSuit c1 c2
+
+-- | Checks if two cards are adjacent in rank
 
 adjacentRank :: Card -> Card -> Bool
 adjacentRank (Card _ r1) (Card _ r2) = if r1 /= King then succ r1 == r2 else False
 
+-- | Checks if two cards are of equal rank
+
 equalRank :: Card -> Card -> Bool
 equalRank (Card _ r1) (Card _ r2) = r1 == r2
+
+-- | Checks if two cards are of equal suit
 
 equalSuit :: Card -> Card -> Bool
 equalSuit (Card s1 _) (Card s2 _) = s1 == s2
@@ -679,17 +703,12 @@ deadwoodCalculator :: [Card] -> Int
 deadwoodCalculator cards = sum $ map cardValue cards
 
 
-data RoseTree = Node ([Card], [Card]) [RoseTree] deriving Show
-
-
 
 -- | This function builds a rosetree of combinations of melds out of the list of melds
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace,Card Club Two, Card Club Three, Card Diamond Four, Card Club Five, Card Club Six]
 -- >>>let b = buildMelds a
 -- >>>buildTree b [] a
 --Node ([],[SA,HA,CA,DA,C2,C3,D4,C5,C6]) [Node ([SA,CA,DA,HA],[C2,C3,D4,C5,C6]) [],Node ([SA,CA,DA],[HA,C2,C3,D4,C5,C6]) [],Node ([SA,CA,HA],[DA,C2,C3,D4,C5,C6]) [],Node ([SA,DA,HA],[CA,C2,C3,D4,C5,C6]) [Node ([CA,C2,C3],[D4,C5,C6]) []],Node ([CA,DA,HA],[SA,C2,C3,D4,C5,C6]) [],Node ([CA,C2,C3],[SA,HA,DA,D4,C5,C6]) [Node ([SA,DA,HA],[D4,C5,C6]) []]]
-
-
 
 buildTree :: [[Card]] -> [Card] -> [Card] -> RoseTree
 buildTree melds hand deadwood
@@ -752,9 +771,13 @@ removeEmptyList cardl = map (filter (/=[])) cardl
 -- >>>minMelds e a min
 -- [[[SA,DA,HA],[CA,C2,C3]],[[CA,C2,C3],[SA,DA,HA]]]
 
+
+
+----------------------------------MELDS--------------------------------------
+
+
 minMelds :: [[[Card]]] -> [Card] -> Int -> [[[Card]]]
 minMelds m hand smallest = (filter ((==smallest).deadwoodCalculator.(removeElements hand).concat) m)
-
 
 -- | Assembles formal meld list given a list of melds and a hand
 -- Examples:
@@ -767,15 +790,16 @@ minMelds m hand smallest = (filter ((==smallest).deadwoodCalculator.(removeEleme
 -- >>>assembleMeld (head f) a
 --[R3SAS2S3,R3S4S5S6,R4S7S8S9ST]
 
-
 assembleMeld :: [[Card]] -> [Card] -> [Meld]
 assembleMeld melds hand = m ++ deadwood
   where deadwood = map fromJust $ filter maybeFilter $ map createMeld $ [[x] | x <- removeElements hand $ concat melds]
         m = map fromJust $ filter maybeFilter $ map createMeld melds
 
+-- | Checks if a value is Nothing or Just _
 maybeFilter :: Maybe a -> Bool
 maybeFilter (Nothing) = False
 maybeFilter (Just _) = True
+
 -- | Creates a meld from a list of cards
 -- Examples:
 -- >>>let b = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five ]
@@ -784,6 +808,7 @@ maybeFilter (Just _) = True
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace]
 -- >>>createMeld a
 --Just S3SAHACA
+
 createMeld :: [Card] -> Maybe Meld
 createMeld [c1] = Just $ Deadwood c1
 createMeld three@(c1:c2:c3:[]) = if isSet three then Just $ Set3 c1 c2 c3 else Just $ Straight3 c1 c2 c3
@@ -792,6 +817,7 @@ createMeld (c1:c2:c3:c4:c5:[]) = Just $ Straight5 c1 c2 c3 c4 c5
 createMeld [] = Nothing
 createMeld [_,_] = Nothing
 createMeld (_:_:_:_:_:_:_) = Nothing
+
 -- | Creates a list of melds given a hand
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
