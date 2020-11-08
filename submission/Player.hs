@@ -83,7 +83,10 @@ playCard card _ memory hand
   | gin = (Action Gin dropCard, serMemory)
   | knock = (Action Knock dropCard, serMemory)
   | otherwise = (Action Drop dropCard, serMemory)
-  where dropCard = dropHighCard (hand)
+  where deckWeights = createWeightedDeck
+        discardWeights = discardListAlterCardWeight (oppNoWant newMemory) deckWeights
+        wantWeights = wantListAlterCardWeight (oppTake newMemory) discardWeights
+        dropCard = dropHighCard (hand)
         newHand = removeElements (card:hand) [dropCard]
 --      Here I am checking if the current hand is equal to the last hand, to check if we are in the first turn of a new
 --      round and therefore cannot gin/knock
@@ -190,11 +193,11 @@ discardListAlterCardWeight :: [Card] -> [Weight] -> [Weight]
 discardListAlterCardWeight cardl weightl = foldl (\acc curr -> discardAlterCardWeight acc curr) weightl cardl
 
 -- | This function alters the weights of cards that are related to the cards in the list
-stockListAlterCardWeight :: [Card] -> [Weight] -> [Weight]
-stockListAlterCardWeight cardl weightl = foldl (\acc curr -> stockAlterCardWeight acc curr) weightl cardl
+wantListAlterCardWeight :: [Card] -> [Weight] -> [Weight]
+wantListAlterCardWeight cardl weightl = foldl (\acc curr -> wantAlterCardWeight acc curr) weightl cardl
 
 -- |This function alters the weights of cards that are related to a single card
--- It is like a parent function which is used to implement discardAlterCardWeight and stockAlterCardWeight
+-- It is like a parent function which is used to implement discardAlterCardWeight and wantAlterCardWeight
 alterCardWeightFunction :: (Int -> Int) -> [Weight] -> Card -> [Weight]
 alterCardWeightFunction f weights card = map (\(Weight c i) -> if c `elem` (relatedCards card) then functionOnCardWeight f (Weight c i) else Weight c i ) weights
 
@@ -211,10 +214,10 @@ discardAlterCardWeight = alterCardWeightFunction (\x -> x-1)
 --
 -- Examples:
 -- >>>let a = [Weight (Card Diamond Ten) 0, Weight (Card Spade Seven) 0, Weight (Card Spade Eight) 0, Weight (Card Spade Nine) 0, Weight (Card Spade Ten) 0, Weight (Card Spade Jack) 0, Weight (Card Diamond Eight) 0, Weight (Card Club King) 0 ]
--- >>>stockAlterCardWeight a $ Card Spade Ten
+-- >>>wantAlterCardWeight a $ Card Spade Ten
 -- [DT-w1,S7-w0,S8-w1,S9-w1,ST-w1,SJ-w1,D8-w0,CK-w0]
-stockAlterCardWeight :: [Weight] -> Card -> [Weight]
-stockAlterCardWeight = alterCardWeightFunction (\x -> x + 1)
+wantAlterCardWeight :: [Weight] -> Card -> [Weight]
+wantAlterCardWeight = alterCardWeightFunction (\x -> x + 1)
 
 -- | Returns a list of cards that are related to the card, this includes
 -- Cards of the same value with a different suit, or cards that have the same suit but are close by (2 ranks away)
@@ -375,7 +378,7 @@ sepby1 p s =
 -- ST
 
 
-dropHighCard :: [Card] -> Card
+dropHighCard :: [Card]  -> Card
 dropHighCard hand =  highestCard (if deadWood == [] then (if pairs == [] then bigDiscard melds else pairs) else deadWood )
   where melds = if createBestMeld hand == [] then [] else (createBestMeld hand)
         pairs = pairCards (removeElements hand $ concat melds)
@@ -386,8 +389,7 @@ dropHighCard hand =  highestCard (if deadWood == [] then (if pairs == [] then bi
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Jack, Card Spade Queen, Card Diamond Eight, Card Spade King, Card Diamond Ace, Card Club Ace]
 -- >>>let b = Card Heart Ace
 -- >>>completesMeld a b
--- True
--- >>>let c = Card Heart Jack
+-- True-- >>>let c = Card Heart Jack
 -- >>>completesMeld a c
 -- False
 -- >>>let d = Card Heart Ten
