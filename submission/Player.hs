@@ -8,32 +8,53 @@ import Rummy.Types   -- Here you will find types used in the game of Rummy
 import Cards         -- Finally, the generic card type(s)
 -- You can add more imports if you need them
 
+
+
+updateHand :: Memory -> [Card] -> Memory
+updateHand mem newHand= Memory {discard = discard mem, oppTake = oppTake mem,
+                                oppNoWant = oppNoWant mem, lastHand = newHand}
+
+
+
 -- | This function updates the memory using the data about the opponent drawing
 -- Examples:
 -- >>> let a = Just Discard
--- >>> let b = Memory [Card Spade Ace, Card Diamond Two]  [Card Spade Nine]  [Card Spade Jack]
+-- >>> let b = Memory [Card Spade Ace, Card Diamond Two]  [Card Spade Nine]  [Card Spade Jack] [Card Spade King]
 -- >>> oppDrawUpdateMemory a b
---Memory {discard = [SA], oppTake = [S9,D2], oppNoWant = [SJ]}
+--Memory {discard = [SA], oppTake = [S9,D2], oppNoWant = [SJ], lastHand = [SK]}
 -- >>>let c = Just Stock
 -- >>>oppDrawUpdateMemory c b
---Memory {discard = [SA,D2], oppTake = [S9], oppNoWant = [SJ,D2]}
-
+--Memory {discard = [SA,D2], oppTake = [S9], oppNoWant = [SJ,D2], lastHand = [SK]}
+-- >>>let d = Memory [] [] [] []
+-- >>>oppDrawUpdateMemory a d
+-- Memory {discard = [], oppTake = [], oppNoWant = [], lastHand = []}
+--
 oppDrawUpdateMemory :: Maybe Draw -> Memory -> Memory
-oppDrawUpdateMemory (Just Discard) (mem) = Memory {discard = init (discard mem), oppTake = (oppTake mem) ++ discardTopCard mem, oppNoWant = oppNoWant mem}
-oppDrawUpdateMemory (Just Stock) (mem) = Memory {discard = discard mem, oppTake = oppTake mem, oppNoWant = (oppNoWant mem) ++ discardTopCard mem}
+oppDrawUpdateMemory (Just Discard) (mem) = Memory {discard = if discard mem == [] then [] else init (discard mem)
+                                                  ,oppTake = (oppTake mem) ++ discardTopCard mem
+                                                  ,oppNoWant = oppNoWant mem
+                                                  ,lastHand = lastHand mem }
+oppDrawUpdateMemory (Just Stock) (mem) = Memory {discard = discard mem
+                                                , oppTake = oppTake mem
+                                                , oppNoWant = (oppNoWant mem) ++ discardTopCard mem
+                                                , lastHand = lastHand mem }
 oppDrawUpdateMemory Nothing mem = mem
+
 
 discardTopCard :: Memory -> [Card]
 discardTopCard mem = if length (discard mem) == 0 then [] else [last (discard mem)]
 -- | Adds the opponent's discard to the memory
--- >>> let b = Memory [Card Spade Ace, Card Diamond Two]  [Card Spade Nine]  [Card Spade Jack]
+-- >>> let b = Memory [Card Spade Ace, Card Diamond Two]  [Card Spade Nine]  [Card Spade Jack] [Card Spade King]
 -- >>>addDiscard True (Card Spade King) b
--- Memory {discard = [SA,D2], oppTake = [S9], oppNoWant = [SJ,SK]}
+-- Memory {discard = [SA,D2], oppTake = [S9], oppNoWant = [SJ,SK], lastHand = [SK]}
 -- >>>addDiscard False (Card Spade King) b
--- Memory {discard = [SA,D2,SK], oppTake = [S9], oppNoWant = [SJ,SK]}
+-- Memory {discard = [SA,D2,SK], oppTake = [S9], oppNoWant = [SJ,SK], lastHand = [SK]}
 
 addDiscard :: Bool -> Card -> Memory -> Memory
-addDiscard takeDiscard card mem = Memory {discard = (discard mem) ++ (if takeDiscard then [] else [card]), oppTake = oppTake mem, oppNoWant = (oppNoWant mem) ++ [card]}
+addDiscard takeDiscard card mem = Memory {discard = (discard mem) ++ (if takeDiscard then [] else [card])
+                                          ,oppTake = oppTake mem
+                                          ,oppNoWant = (oppNoWant mem) ++ [card]
+                                          ,lastHand = (lastHand mem)}
 
 pickCard :: ActionFunc
 pickCard card _ memory opp hand
@@ -45,9 +66,19 @@ pickCard card _ memory opp hand
         discardMemory = addDiscard takeDiscard card drawMemory
         serMemory = memoryToString discardMemory
 
-
+instance Show Action where
+  show (Action act card) = (show act) ++ (show card)
 -- | This function is called once you have drawn a card, you need to decide
 -- which action to call.
+-- >>>let a = Card Spade Jack
+-- >>>let b = (0,0)
+-- >>>let c = "///"
+-- >>>let e = "CACACACACA//"
+-- >>>let d = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
+-- >>>playCard a b c d
+--(DropST,"ST///SJSAS2S3S4S5S6S7S8S9")
+-- >>>length (discard (stringToListMemory c)) > 100 && (canGin d)
+--False
 playCard :: PlayFunc
 playCard card _ memory hand
   | gin = (Action Gin dropCard, serMemory)
@@ -55,10 +86,15 @@ playCard card _ memory hand
   | otherwise = (Action Drop dropCard, serMemory)
   where dropCard = dropHighCard (hand)
         newHand = removeElements (card:hand) [dropCard]
-        gin = canGin newHand
-        knock = canKnock newHand
+--      Here I am checking if the current hand is equal to the last hand, to check if we are in the first turn of a new
+--      round and therefore cannot gin/knock
+        gin = (canGin newHand) && ((lastHand desMemory == hand))
+        knock = (canKnock newHand) && ((lastHand desMemory == hand))
         desMemory = stringToListMemory memory
-        serMemory = memoryToString desMemory
+        newMemory = if lastHand desMemory /= hand then Memory [] [] [] [] else desMemory
+        discardMemory = Memory ((discard newMemory) ++ [dropCard]) (oppTake newMemory) (oppNoWant newMemory) (lastHand newMemory)
+        handMemory = updateHand discardMemory newHand
+        serMemory = memoryToString handMemory
 
 
 --  where card = highestCard.(removeElements hand )(createBestMeld hand)
@@ -102,32 +138,37 @@ instance Show Meld where
 data Memory = Memory { discard :: [Card]
                      , oppTake :: [Card]
                      , oppNoWant :: [Card]
+                     , lastHand :: [Card]
                       } deriving (Show)
 
 
 
 
 -- | This converts a memory data type to a string
--- >>> a = Memory [Card Spade Ace] [Card Spade Ace] [Card Spade Ace, Card Diamond Two]
+-- >>> a = Memory [Card Spade Ace] [Card Spade Ace] [Card Spade Ace, Card Diamond Two] [Card Spade King]
 -- >>>memoryToString a
--- "SA/SA/SAD2"
+-- "SA/SA/SAD2/SK"
 memoryToString :: Memory -> String
-memoryToString memory = makeMem(discard memory) ++ "/" ++ makeMem(oppTake memory) ++ "/" ++ makeMem(oppNoWant memory)
+memoryToString (Memory a b c d) = makeMem(a) ++ "/" ++ makeMem(b) ++ "/" ++ makeMem(c) ++ "/" ++ makeMem(d)
 
--- | This converts the memory string into a list of cards
+-- | This converts the memory string within the parser to into a list of cards
 -- Examples:
--- >>> a = Just "SA/SA/SAD2"
+-- >>> a = Just "SA/SA/SAD2/SK"
 -- >>>maybeStringToListMemory a
--- Memory {discard = [SA], oppTake = [SA], oppNoWant = [SA,D2]}
+-- Memory {discard = [SA], oppTake = [SA], oppNoWant = [SA,D2], lastHand = [SK]}
+-- >>>maybeStringToListMemory Nothing
+-- Memory {discard = [], oppTake = [], oppNoWant = [], lastHand = []}
 maybeStringToListMemory :: Maybe Input -> Memory
 maybeStringToListMemory (Just string) = stringToListMemory string
-maybeStringToListMemory Nothing = listMemoryToMemory [[],[],[]]
+maybeStringToListMemory Nothing = listMemoryToMemory [[],[],[],[]]
 
 -- | This converts the memory string into a list of cards
 -- Examples:
--- >>> a = "SA/SA/SAD2"
+-- >>> a = "SA/SA/SAD2/SK"
 -- >>>stringToListMemory a
--- Memory {discard = [SA], oppTake = [SA], oppNoWant = [SA,D2]}
+-- Memory {discard = [SA], oppTake = [SA], oppNoWant = [SA,D2], lastHand = [SK]}
+
+
 
 stringToListMemory :: Input -> Memory
 stringToListMemory string = listMemoryToMemory $ getMem (parse (sepby (list cardParser) (is '/')) string)
@@ -135,8 +176,8 @@ stringToListMemory string = listMemoryToMemory $ getMem (parse (sepby (list card
 
 listMemoryToMemory :: [[Card]] -> Memory
 listMemoryToMemory lmem = case lmem of
-                        (c1:c2:c3:[]) -> Memory c1 c2 c3
-                        _ -> Memory [] [] []
+                        (c1:c2:c3:c4:[]) -> Memory c1 c2 c3 c4
+                        _ -> Memory [] [] [] []
 -- | This function turns a list of cards into the string memory
 -- Example:
 -- >>> makeMem [Card Spade Ace, Card Spade Two, Card Diamond Three]
@@ -183,7 +224,8 @@ cardParser = do  x <- suitParser
 -- Credit to week11 workshop
 list :: Parser a -> Parser [a]
 list a = list1 a ||| pure []
--- | This function returns a parser that produces at least one value from the given parser then continues producing a list of values from the given parser
+-- | This function returns a parser that produces at least one value from the given parser
+--  then continues producing a list of values from the given parser
 -- Credit to week11 workshop
 list1 :: Parser a -> Parser [a]
 list1 p = do
@@ -207,14 +249,21 @@ sepby1 p s =
 
 
 -- | This function chooses the highest deadwood card to drop
--- TODO: THIS CAN BREAK IF YOU HAVE A GIN WITH THE EXTRA CARD (I mean it might wrongly pick the highest card. In the case that the whole hand is a Gin, just drop the card that you just picked up or drop a card from a 4/5 meld)
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Jack, Card Spade Queen, Card Diamond Eight, Card Spade King, Card Diamond Jack, Card Club Ten]
 -- >>>dropHighCard a
 -- DJ
+-- >>>let b = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
+-- >>>let melds = createBestMeld b
+-- >>>dropHighCard b
+-- ST
+
+
 dropHighCard :: [Card] -> Card
-dropHighCard hand =  highestCard . removeElements hand $ melds
-  where melds = if createBestMeld hand == [] then [] else head (createBestMeld hand)
+dropHighCard hand =  highestCard (if deadWood == [] then bigDiscard melds else deadWood )
+  where melds = if createBestMeld hand == [] then [] else (createBestMeld hand)
+        bigDiscard meld = last $ filter (\x -> length x >=4 ) meld
+        deadWood = removeElements hand (concat melds)
 -- | This function checks whether a card completes a meld in a hand
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Jack, Card Spade Queen, Card Diamond Eight, Card Spade King, Card Diamond Ace, Card Club Ace]
@@ -585,6 +634,9 @@ maybeFilter (Nothing) = False
 maybeFilter (Just _) = True
 -- | Creates a meld from a list of cards
 -- Examples:
+-- >>>let b = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five ]
+-- >>>createMeld b
+--Just R5SAS2S3S4S5
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace]
 -- >>>createMeld a
 --Just S3SAHACA
