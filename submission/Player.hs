@@ -86,7 +86,7 @@ playCard card _ memory hand
   where deckWeights = createWeightedDeck
         discardWeights = discardListAlterCardWeight (oppNoWant newMemory) deckWeights
         wantWeights = wantListAlterCardWeight (oppTake newMemory) discardWeights
-        dropCard = dropHighCard (hand)
+        dropCard = dropHighCard (hand) wantWeights
         newHand = removeElements (card:hand) [dropCard]
 --      Here I am checking if the current hand is equal to the last hand, to check if we are in the first turn of a new
 --      round and therefore cannot gin/knock
@@ -377,9 +377,8 @@ sepby1 p s =
 -- >>>dropHighCard b
 -- ST
 
-
-dropHighCard :: [Card]  -> Card
-dropHighCard hand =  highestCard (if deadWood == [] then (if pairs == [] then bigDiscard melds else pairs) else deadWood )
+dropHighCard :: [Card] -> [Weight] -> Card
+dropHighCard hand weights = card $ findLowestWeightCard (if deadWood == [] then (if pairs == [] then bigDiscard melds else pairs) else deadWood ) weights
   where melds = if createBestMeld hand == [] then [] else (createBestMeld hand)
         pairs = pairCards (removeElements hand $ concat melds)
         bigDiscard meld = last $ filter (\x -> length x >=4 ) meld
