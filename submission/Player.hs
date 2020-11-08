@@ -10,6 +10,7 @@ import Cards         -- Finally, the generic card type(s)
 
 
 
+
 updateHand :: Memory -> [Card] -> Memory
 updateHand mem newHand= Memory {discard = discard mem, oppTake = oppTake mem,
                                 oppNoWant = oppNoWant mem, lastHand = newHand}
@@ -77,8 +78,6 @@ instance Show Action where
 -- >>>let d = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Five, Card Spade Six, Card Spade Seven, Card Spade Eight, Card Spade Nine, Card Spade Ten]
 -- >>>playCard a b c d
 --(DropST,"ST///SJSAS2S3S4S5S6S7S8S9")
--- >>>length (discard (stringToListMemory c)) > 100 && (canGin d)
---False
 playCard :: PlayFunc
 playCard card _ memory hand
   | gin = (Action Gin dropCard, serMemory)
@@ -141,8 +140,125 @@ data Memory = Memory { discard :: [Card]
                      , lastHand :: [Card]
                       } deriving (Show)
 
+data Weight = Weight {card :: Card, weight :: Int}
+instance Show Weight where
+  show (Weight card int) = show card ++ "-w" ++ show int
+-- | Creates a deck of cards with weight attached to each card
+-- >>>createWeightedDeck
+--[SA-w0,S2-w0,S3-w0,S4-w0,S5-w0,S6-w0,S7-w0,S8-w0,S9-w0,ST-w0,SJ-w0,SQ-w0,SK-w0,CA-w0,C2-w0,C3-w0,C4-w0,C5-w0,C6-w0,C7-w0,C8-w0,C9-w0,CT-w0,CJ-w0,CQ-w0,CK-w0,DA-w0,D2-w0,D3-w0,D4-w0,D5-w0,D6-w0,D7-w0,D8-w0,D9-w0,DT-w0,DJ-w0,DQ-w0,DK-w0,HA-w0,H2-w0,H3-w0,H4-w0,H5-w0,H6-w0,H7-w0,H8-w0,H9-w0,HT-w0,HJ-w0,HQ-w0,HK-w0]
 
 
+createWeightedDeck :: [Weight]
+createWeightedDeck = map (\x -> Weight x 0) createDeck
+
+
+-- | Finds the card with the lowest weight given a list of cards and a list of weights
+-- This function cannot/should not accept empty weight or list of cards
+-- Examples:
+-- >>>let a = createWeightedDeck
+-- >>>let b = [Card Spade Seven, Card Diamond Ace, Card Spade Ten, Card Spade Jack, Card Diamond Ten, Card Diamond Jack]
+-- >>>let c = createWeightedDeck
+-- >>>let b = [Card Spade Seven, Card Diamond Ace, Card Spade Ten, Card Spade Jack, Card Diamond Ten, Card Diamond Jack]
+-- >>>let d = discardListAlterCardWeight b a
+-- >>>e = [Card Spade Ace, Card Spade Two, Card Diamond King, Card Club Three]
+-- >>>findLowestWeightCard e d
+--SA-w-1
+
+findLowestWeightCard :: [Card] -> [Weight] -> Weight
+findLowestWeightCard cardl weights = foldl (\acc curr -> if weight curr < weight acc then curr else acc) (head filteredWeight) filteredWeight
+  where filteredWeight = filter (\w -> elem (card w) cardl) weights
+
+
+
+-- | Applies a function to the int weight of a weight datatype
+-- >>>let a = Weight (Card Spade Ace) 2
+-- >>>functionOnCardWeight (+2)  a
+-- SA-w4
+
+functionOnCardWeight:: (Int -> Int) -> Weight -> Weight
+functionOnCardWeight f (Weight card int) =  Weight card $ f int
+
+
+-- |This function alters the weights of cards that a related to cards in a list of cards
+-- >>>let a = createWeightedDeck
+-- >>>let b = [Card Spade Seven, Card Diamond Ace, Card Spade Ten, Card Spade Jack, Card Diamond Ten, Card Diamond Jack]
+-- >>>discardListAlterCardWeight b a
+--[SA-w-1,S2-w0,S3-w0,S4-w0,S5-w-1,S6-w-1,S7-w-1,S8-w-2,S9-w-3,ST-w-3,SJ-w-3,SQ-w-2,SK-w-1,CA-w-1,C2-w0,C3-w0,C4-w0,C5-w0,
+-- C6-w0,C7-w-1,C8-w0,C9-w0,CT-w-2,CJ-w-2,CQ-w0,CK-w0,DA-w-1,D2-w-1,D3-w-1,D4-w0,D5-w0,D6-w0,D7-w-1,D8-w-1,D9-w-2,DT-w-3,DJ-w-3,
+-- DQ-w-2,DK-w-1,HA-w-1,H2-w0,H3-w0,H4-w0,H5-w0,H6-w0,H7-w-1,H8-w0,H9-w0,HT-w-2,HJ-w-2,HQ-w0,HK-w0]
+discardListAlterCardWeight :: [Card] -> [Weight] -> [Weight]
+discardListAlterCardWeight cardl weightl = foldl (\acc curr -> discardAlterCardWeight acc curr) weightl cardl
+
+-- | This function alters the weights of cards that are related to the cards in the list
+stockListAlterCardWeight :: [Card] -> [Weight] -> [Weight]
+stockListAlterCardWeight cardl weightl = foldl (\acc curr -> stockAlterCardWeight acc curr) weightl cardl
+
+-- |This function alters the weights of cards that are related to a single card
+-- It is like a parent function which is used to implement discardAlterCardWeight and stockAlterCardWeight
+alterCardWeightFunction :: (Int -> Int) -> [Weight] -> Card -> [Weight]
+alterCardWeightFunction f weights card = map (\(Weight c i) -> if c `elem` (relatedCards card) then functionOnCardWeight f (Weight c i) else Weight c i ) weights
+
+-- | Lowers the probability that the opponent wants cards for all cards related to a particular card
+--
+-- Examples:
+-- >>>let a = [Weight (Card Diamond Ten) 0, Weight (Card Spade Seven) 0, Weight (Card Spade Eight) 0, Weight (Card Spade Nine) 0, Weight (Card Spade Ten) 0, Weight (Card Spade Jack) 0, Weight (Card Diamond Eight) 0, Weight (Card Club King) 0 ]
+-- >>>discardAlterCardWeight a $ Card Spade Ten
+-- [DT-w-1,S7-w0,S8-w-1,S9-w-1,ST-w-1,SJ-w-1,D8-w0,CK-w0]
+discardAlterCardWeight :: [Weight] -> Card -> [Weight]
+discardAlterCardWeight = alterCardWeightFunction (\x -> x-1)
+
+-- | Lowers the probability that the opponent wants cards for all cards related to a particular card
+--
+-- Examples:
+-- >>>let a = [Weight (Card Diamond Ten) 0, Weight (Card Spade Seven) 0, Weight (Card Spade Eight) 0, Weight (Card Spade Nine) 0, Weight (Card Spade Ten) 0, Weight (Card Spade Jack) 0, Weight (Card Diamond Eight) 0, Weight (Card Club King) 0 ]
+-- >>>stockAlterCardWeight a $ Card Spade Ten
+-- [DT-w1,S7-w0,S8-w1,S9-w1,ST-w1,SJ-w1,D8-w0,CK-w0]
+stockAlterCardWeight :: [Weight] -> Card -> [Weight]
+stockAlterCardWeight = alterCardWeightFunction (\x -> x + 1)
+
+-- | Returns a list of cards that are related to the card, this includes
+-- Cards of the same value with a different suit, or cards that have the same suit but are close by (2 ranks away)
+-- Examples:
+-- >>>relatedCards $ Card Spade Seven
+-- [C7,D7,H7,S5,S6,S7,S8,S9]
+-- >>>relatedCards $ Card Spade Ace
+--[CA,DA,HA,SA,S2,S3]
+
+relatedCards :: Card -> [Card]
+relatedCards (Card suit value) = set ++ run
+  where set = [Card x value | x <- delete suit [Spade .. Heart]]
+        run = [Card suit x | x <- [(lowerBound value 2) .. (upperBound value 2)]]
+
+-- | Returns the rank that is n lower than the current rank and guards against the lowest rank Ace
+-- Examples:
+-- >>>lowerBound Ace 2
+-- A
+--
+-- >]>>lowerBound Two 2
+-- A
+-- >>>lowerBound King 2
+-- J
+lowerBound :: Rank -> Int -> Rank
+lowerBound rank 0 = rank
+lowerBound rank int = if rank /= Ace then lowerBound (pred rank) (int - 1) else lowerBound rank (int -1)
+
+
+-- | Returns the rank that is n higher than the current rank and guards against the highest rank King
+-- Examples:
+-- >>>upperBound King 2
+-- K
+-- >>>upperBound Eight 2
+-- T
+upperBound :: Rank -> Int -> Rank
+upperBound rank 0 = rank
+upperBound rank int = if rank /= King then upperBound (succ rank) (int -1) else upperBound rank (int -1 )
+
+
+-- | Creates a deck of cards
+-- >>>createDeck
+-- [SA,S2,S3,S4,S5,S6,S7,S8,S9,ST,SJ,SQ,SK,CA,C2,C3,C4,C5,C6,C7,C8,C9,CT,CJ,CQ,CK,DA,D2,D3,D4,D5,D6,D7,D8,D9,DT,DJ,DQ,DK,HA,H2,H3,H4,H5,H6,H7,H8,H9,HT,HJ,HQ,HK]
+createDeck :: [Card]
+createDeck = [Card (suit) (value)| suit <- [Spade .. Heart], value <- [Ace .. King]]
 
 -- | This converts a memory data type to a string
 -- >>> a = Memory [Card Spade Ace] [Card Spade Ace] [Card Spade Ace, Card Diamond Two] [Card Spade King]
@@ -260,10 +376,11 @@ sepby1 p s =
 
 
 dropHighCard :: [Card] -> Card
-dropHighCard hand =  highestCard (if deadWood == [] then bigDiscard melds else deadWood )
+dropHighCard hand =  highestCard (if deadWood == [] then (if pairs == [] then bigDiscard melds else pairs) else deadWood )
   where melds = if createBestMeld hand == [] then [] else (createBestMeld hand)
+        pairs = pairCards (removeElements hand $ concat melds)
         bigDiscard meld = last $ filter (\x -> length x >=4 ) meld
-        deadWood = removeElements hand (concat melds)
+        deadWood = removeElements hand (pairs ++ (concat melds))
 -- | This function checks whether a card completes a meld in a hand
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Spade Two, Card Spade Three, Card Spade Four, Card Spade Jack, Card Spade Queen, Card Diamond Eight, Card Spade King, Card Diamond Ace, Card Club Ace]
@@ -459,13 +576,13 @@ filterSets cardL = filter isSet cardL
 -- Examples:
 -- >>>let a = [[Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace]]
 -- >>>generateCombinations a
--- [[SA,HA,CA],[SA,HA,DA],[SA,CA,DA],[HA,CA,DA]]
+-- [[SA,HA,CA,DA],[SA,HA,CA],[SA,HA,DA],[SA,CA,DA],[HA,CA,DA]]
 -- >>>let b = [[Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace], [Card Club Ace, Card Diamond Ace, Card Heart Ace]]
 -- >>>generateCombinations b
--- [[CA,DA,HA],[SA,HA,CA],[SA,HA,DA],[SA,CA,DA],[HA,CA,DA]]
+-- [[CA,DA,HA],[SA,HA,CA,DA],[SA,HA,CA],[SA,HA,DA],[SA,CA,DA],[HA,CA,DA]]
 
 generateCombinations :: [[Card]] -> [[Card]]
-generateCombinations cardL = nub (foldl (\acc curr -> if setOfLengthFour curr then combinations curr 3 ++ acc else curr:acc) [] cardL)
+generateCombinations cardL = nub (foldl (\acc curr -> if setOfLengthFour curr then [curr] ++ combinations curr 3 ++ acc else curr:acc) [] cardL)
    where setOfLengthFour cards = length cards == 4 && isSet cards
 
 -- | Generates subsequences of size n from a list k
@@ -476,12 +593,37 @@ generateCombinations cardL = nub (foldl (\acc curr -> if setOfLengthFour curr th
 combinations :: [Card] -> Int -> [[Card]]
 combinations cards n = filter ((n==).length) $ subsequences cards
 
+
+-- | A modified version of the buildMelds function that instead builds pairs from a list of cards
+-- Examples:
+-- >>>let a = [Card Spade Ace, Card Diamond Two, Card Diamond Three, Card Spade Two, Card Diamond Ace]
+-- >>>buildPairs a
+-- [[SA,DA],[S2,D2],[SA,S2],[DA,D2],[D2,D3]]
+-- >>>buildPairs []
+-- []
+
+
+buildPairs :: [Card] -> [[Card]]
+buildPairs hand = nub (sets ++ runs)
+  where sets = filterSets (foldl (\acc curr -> acc ++ generateGroups (sortSuit hand) curr) [] [2])
+        runs = filterRuns (foldl (\acc curr -> acc ++ generateGroups (sortRank hand) curr) [] [2])
+
+-- | A modified version of the buildMelds function that instead builds pairs from a list of cards
+-- Examples:
+-- >>>let a = [Card Spade Ace, Card Diamond Two, Card Diamond Three, Card Spade Two, Card Diamond Ace]
+-- >>>pairCards a
+-- [SA,DA,S2,D2,D3]
+-- >>>pairCards []
+-- []
+pairCards :: [Card] -> [Card]
+pairCards hand = nub $ concat $ buildPairs hand
+
 -- | Builds a list of melds from a list of cards
 --
 -- Examples:
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace,Card Club Two, Card Club Three, Card Diamond Four, Card Club Five, Card Club Six]
 -- >>>buildMelds a
--- [[SA,CA,DA],[SA,CA,HA],[SA,DA,HA],[CA,DA,HA],[CA,C2,C3]]
+-- [[SA,CA,DA,HA],[SA,CA,DA],[SA,CA,HA],[SA,DA,HA],[CA,DA,HA],[CA,C2,C3]]
 
 buildMelds :: [Card] -> [[Card]]
 buildMelds hand = nub (sets ++ runs)
@@ -544,7 +686,8 @@ data RoseTree = Node ([Card], [Card]) [RoseTree] deriving Show
 -- >>>let a = [Card Spade Ace, Card Heart Ace, Card Club Ace, Card Diamond Ace,Card Club Two, Card Club Three, Card Diamond Four, Card Club Five, Card Club Six]
 -- >>>let b = buildMelds a
 -- >>>buildTree b [] a
---Node ([],[SA,HA,CA,DA,C2,C3,D4,C5,C6]) [Node ([SA,CA,DA],[HA,C2,C3,D4,C5,C6]) [],Node ([SA,CA,HA],[DA,C2,C3,D4,C5,C6]) [],Node ([SA,DA,HA],[CA,C2,C3,D4,C5,C6]) [Node ([CA,C2,C3],[D4,C5,C6]) []],Node ([CA,DA,HA],[SA,C2,C3,D4,C5,C6]) [],Node ([CA,C2,C3],[SA,HA,DA,D4,C5,C6]) [Node ([SA,DA,HA],[D4,C5,C6]) []]]
+--Node ([],[SA,HA,CA,DA,C2,C3,D4,C5,C6]) [Node ([SA,CA,DA,HA],[C2,C3,D4,C5,C6]) [],Node ([SA,CA,DA],[HA,C2,C3,D4,C5,C6]) [],Node ([SA,CA,HA],[DA,C2,C3,D4,C5,C6]) [],Node ([SA,DA,HA],[CA,C2,C3,D4,C5,C6]) [Node ([CA,C2,C3],[D4,C5,C6]) []],Node ([CA,DA,HA],[SA,C2,C3,D4,C5,C6]) [],Node ([CA,C2,C3],[SA,HA,DA,D4,C5,C6]) [Node ([SA,DA,HA],[D4,C5,C6]) []]]
+
 
 
 buildTree :: [[Card]] -> [Card] -> [Card] -> RoseTree
@@ -578,7 +721,7 @@ findMinDeadwood (Node (_, _) children) = foldr min 200 $ map findMinDeadwood chi
 -- >>>let c = buildTree b [] a
 -- >>>let d =  findMinDeadwood c
 -- >>>paths c
---[[[],[SA,CA,DA]],[[],[SA,CA,HA]],[[],[SA,DA,HA],[CA,C2,C3]],[[],[CA,DA,HA]],[[],[CA,C2,C3],[SA,DA,HA]]]
+--[[[],[SA,CA,DA,HA]],[[],[SA,CA,DA]],[[],[SA,CA,HA]],[[],[SA,DA,HA],[CA,C2,C3]],[[],[CA,DA,HA]],[[],[CA,C2,C3],[SA,DA,HA]]]
 
 paths :: RoseTree -> [[[Card]]]
 paths (Node (hand, _) []) = [[hand]]
@@ -593,7 +736,7 @@ paths (Node (hand,_) children) = map (hand:) $ concat $ map paths children
 -- >>>let d =  findMinDeadwood c
 -- >>>let e = paths c
 -- >>>removeEmptyList e
--- [[[SA,CA,DA]],[[SA,CA,HA]],[[SA,DA,HA],[CA,C2,C3]],[[CA,DA,HA]],[[CA,C2,C3],[SA,DA,HA]]]
+-- [[[SA,CA,DA,HA]],[[SA,CA,DA]],[[SA,CA,HA]],[[SA,DA,HA],[CA,C2,C3]],[[CA,DA,HA]],[[CA,C2,C3],[SA,DA,HA]]]
 
 removeEmptyList :: [[[Card]]] -> [[[Card]]]
 removeEmptyList cardl = map (filter (/=[])) cardl
